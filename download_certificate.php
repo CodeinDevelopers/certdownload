@@ -65,7 +65,7 @@ try {
     // Validate certificate exists
     if (!isset($certificates[$phone])) {
         http_response_code(404);
-        echo json_encode(["error" => "Certificate not found for this phone number"]);
+        echo json_encode(["error" => "No Certificate registered to you was found"]);
         exit;
     }
     
@@ -99,7 +99,7 @@ try {
         $cert['deleted'] = true;
         file_put_contents($dataFile, json_encode($certificates, JSON_PRETTY_PRINT));
         http_response_code(403);
-        echo json_encode(["error" => "Download limit exceeded"]);
+        echo json_encode(["error" => "Certificate Download limit exceeded!"]);
         exit;
     }
     
@@ -110,11 +110,17 @@ try {
         exit;
     }
     
+    // Store file path before serving (needed for deletion)
+    $filePath = $cert['path'];
+    
     // Increment download count
     $cert['downloadCount']++;
     
+    // Check if this is the final download
+    $isFinalDownload = ($cert['downloadCount'] >= $cert['maxDownloads']);
+    
     // Mark as deleted if this is the last download
-    if ($cert['downloadCount'] >= $cert['maxDownloads']) {
+    if ($isFinalDownload) {
         $cert['deleted'] = true;
     }
     
@@ -124,7 +130,7 @@ try {
         throw new Exception("Failed to save certificate data");
     }
     
-  // Serve the file directly instead of returning JSON
+    // Serve the file directly instead of returning JSON
     header('Content-Type: application/octet-stream');
     header('Content-Disposition: attachment; filename="' . $cert['filename'] . '"');
     header('Content-Length: ' . filesize($cert['path']));
@@ -132,6 +138,18 @@ try {
     
     // Output the file
     readfile($cert['path']);
+    
+    // Delete the file from server if this was the final download
+    if ($isFinalDownload) {
+        if (file_exists($filePath)) {
+            if (unlink($filePath)) {
+                error_log("Certificate file deleted after final download: " . $filePath);
+            } else {
+                error_log("Failed to delete certificate file: " . $filePath);
+            }
+        }
+    }
+    
     exit;
     
 } catch (Exception $e) {

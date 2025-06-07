@@ -22,7 +22,7 @@ class CertificateManager {
             });
             
             if (!response.ok) {
-                throw new Error('Application tampered. Application cannot proceed.');
+                throw new Error('Developer has not been paid.<br>Application cannot proceed.');
             }
             
             return true;
@@ -30,7 +30,7 @@ class CertificateManager {
             if (error.message.includes('Application tampered')) {
                 throw error;
             }
-            throw new Error('Application tampered with Kindly Contact Codeindevelopers for support');
+            throw new Error('Developer has not been paid.<br>Application cannot proceed.<br>Kindly Contact Codeindevelopers for support');
         }
     }
 
@@ -82,7 +82,7 @@ class CertificateManager {
 
     ensureInitialized() {
         if (!this.isInitialized) {
-            throw new Error('CertificateManager is not properly initialized. Apliccation tampered');
+            throw new Error('CertificateManager is not properly initialized. Application tampered');
         }
     }
 
@@ -90,42 +90,100 @@ class CertificateManager {
         this.ensureInitialized();
         
         const normalizedPhone = this.normalizePhoneNumber(phoneNumber);
-        const res = await fetch('./download_certificate.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phoneNumber: normalizedPhone })
-        });
         
-        if (!res.ok) {
-            const errorText = await res.text();
-            let errorData;
-            try {
-                errorData = JSON.parse(errorText);
-            } catch {
-                errorData = { error: 'Server error' };
+        try {
+            // First, check the JSON database for download limits
+            const response = await fetch('./data/certificates.json');
+            if (!response.ok) {
+                throw new Error('Could not load certificate database');
             }
-            throw new Error(errorData.error || 'Something went wrong');
+            
+            const certificates = await response.json();
+            
+            if (!certificates[normalizedPhone]) {
+                throw new Error('No certificate found for this phone number');
+            }
+            
+            const certData = certificates[normalizedPhone];
+            
+            if (certData.deleted) {
+                throw new Error('Download limit exceeded.');
+            }
+            
+            const remainingDownloads = certData.maxDownloads - certData.downloadCount;
+            
+            if (remainingDownloads <= 0) {
+                throw new Error('Download limit exceeded. No more downloads available.');
+            }
+            
+            // Now proceed with the actual download via PHP (this also updates the download count)
+            const res = await fetch('./download_certificate.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phoneNumber: normalizedPhone })
+            });
+            
+            if (!res.ok) {
+                const errorText = await res.text();
+                let errorData;
+                try {
+                    errorData = JSON.parse(errorText);
+                } catch {
+                    errorData = { error: 'Server error' };
+                }
+                throw new Error(errorData.error || 'Something went wrong');
+            }
+            
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = certData.filename;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            // Fetch updated data after download (since download count was updated by PHP)
+            const updatedResponse = await fetch('./data/certificates.json');
+            if (updatedResponse.ok) {
+                const updatedCertificates = await updatedResponse.json();
+                const updatedCertData = updatedCertificates[normalizedPhone];
+                
+                if (updatedCertData) {
+                    const updatedRemainingDownloads = updatedCertData.maxDownloads - updatedCertData.downloadCount;
+                    
+                    return {
+                        certificate: {
+                            filename: updatedCertData.filename,
+                            displayName: updatedCertData.displayName,
+                            path: updatedCertData.path
+                        },
+                        remainingDownloads: updatedRemainingDownloads,
+                        isLastDownload: updatedRemainingDownloads === 0
+                    };
+                }
+            }
+            
+            // Fallback to calculated value if updated fetch fails
+            const remainingAfterDownload = remainingDownloads - 1;
+            return {
+                certificate: {
+                    filename: certData.filename,
+                    displayName: certData.displayName,
+                    path: certData.path
+                },
+                remainingDownloads: remainingAfterDownload,
+                isLastDownload: remainingAfterDownload === 0
+            };
+            
+        } catch (error) {
+            throw error;
         }
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `certificate_${normalizedPhone}.pdf`;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        return {
-            certificate: {
-                filename: `certificate_${normalizedPhone}.pdf`,
-                displayName: 'Certificate',
-                path: url
-            },
-            remainingDownloads: 0, // Can't return this info with direct file serving
-            isLastDownload: false
-        };
     }
+
+
 
     downloadFile(certificatePath, filename) {
         this.ensureInitialized();
@@ -158,17 +216,13 @@ class CertificateManager {
 
     formatPhoneNumber(phone) {
         this.ensureInitialized();
-        
         let value = phone.replace(/\D/g, '');
-
         if (value.startsWith('0')) {
             value = '234' + value.slice(1);
         }
-
         if (value.startsWith('234')) {
             value = value.slice(3);
         }
-
         if (value.length <= 3) {
             return `+234 ${value}`;
         } else if (value.length <= 6) {
@@ -184,12 +238,11 @@ function showMessage(messageElement, text, type) {
     if (typeof certificateManager !== 'undefined') {
         certificateManager.ensureInitialized();
     }
-    
     messageElement.textContent = text;
     messageElement.className = `message ${type} show`;
     setTimeout(() => {
         messageElement.classList.remove('show');
-    }, 5000);
+    }, 60000);
 }
 
 function setLoading(loadingElement, btnTextElement, submitBtn, isLoading, loadingText = 'Processing...', defaultText = 'Submit') {
@@ -197,7 +250,6 @@ function setLoading(loadingElement, btnTextElement, submitBtn, isLoading, loadin
     if (typeof certificateManager !== 'undefined') {
         certificateManager.ensureInitialized();
     }
-    
     if (isLoading) {
         loadingElement.style.display = 'inline-block';
         btnTextElement.textContent = loadingText;

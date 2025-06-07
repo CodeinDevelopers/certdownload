@@ -76,9 +76,10 @@ const uploadLoading = document.getElementById('uploadLoading');
 const uploadBtnText = document.getElementById('uploadBtnText');
 const uploadMessage = document.getElementById('uploadMessage');
 const certificatesList = document.getElementById('certificatesList');
-        phoneInput.addEventListener('input', function(e) {
-            e.target.value = certificateManager.formatPhoneNumber(e.target.value);
-        });
+
+phoneInput.addEventListener('input', function(e) {
+    e.target.value = certificateManager.formatPhoneNumber(e.target.value);
+});
 
 uploadForm.addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -135,6 +136,7 @@ uploadForm.addEventListener('submit', async function(e) {
     }
     setLoading(uploadLoading, uploadBtnText, uploadBtn, false, 'Uploading...', 'Upload Certificate');
 });
+
 function normalizePhoneNumber(phone) {
     let cleaned = phone.replace(/[^\d+]/g, '');
     if (cleaned.startsWith('0')) {
@@ -146,6 +148,7 @@ function normalizePhoneNumber(phone) {
     }
     return cleaned;
 }
+
 async function loadCertificates() {
     try {
         certificatesList.innerHTML = '<div class="empty-state">Loading certificates...</div>';
@@ -198,7 +201,13 @@ async function loadCertificates() {
                             <div class="cert-name">${escapeHtml(cert.displayName)}</div>
                             <div class="cert-phone">${escapeHtml(cert.phoneNumber)}</div>
                         </div>
-                         </div>
+                        <div class="cert-actions">
+                            <button class="delete-btn" onclick="deleteCertificate('${cert.phoneNumber}', '${escapeHtml(cert.displayName)}')" title="Delete Certificate">
+                                <span class="delete-icon">🗑️</span>
+                                Delete
+                            </button>
+                        </div>
+                    </div>
                     <div class="cert-stats">
                         <div class="stat-item">
                             <span class="stat-label">Downloads:</span>
@@ -233,7 +242,81 @@ async function loadCertificates() {
     }
 }
 
-
+// Delete certificate function
+async function deleteCertificate(phoneNumber, displayName) {
+    // Show confirmation dialog
+    if (!confirm(`Are you sure you want to delete the certificate for "${displayName}" (${phoneNumber})?\n\nThis action cannot be undone.`)) {
+        return;
+    }
+    
+    // Show loading state
+    const certificateItem = document.querySelector(`[data-phone="${phoneNumber}"]`);
+    const deleteBtn = certificateItem?.querySelector('.delete-btn');
+    const originalText = deleteBtn?.innerHTML;
+    
+    if (deleteBtn) {
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<span class="delete-icon">⏳</span> Deleting...';
+        deleteBtn.style.opacity = '0.6';
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('phoneNumber', phoneNumber);
+        
+        const response = await fetch('delete_certificate.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Show success message
+            showToast(`Certificate for "${displayName}" deleted successfully`, 'success');
+            
+            // Remove the certificate item with animation
+            if (certificateItem) {
+                certificateItem.style.transition = 'all 0.3s ease-out';
+                certificateItem.style.opacity = '0';
+                certificateItem.style.transform = 'translateX(-100%)';
+                
+                setTimeout(() => {
+                    certificateItem.remove();
+                    
+                    // Check if list is empty after deletion
+                    const remainingItems = document.querySelectorAll('.certificate-item');
+                    if (remainingItems.length === 0) {
+                        certificatesList.innerHTML = '<div class="empty-state">No active certificates found</div>';
+                    }
+                }, 300);
+            }
+            
+            // Reload certificates list after a short delay
+            setTimeout(() => {
+                loadCertificates();
+            }, 500);
+            
+        } else {
+            throw new Error(result.message || 'Delete failed');
+        }
+        
+    } catch (error) {
+        console.error('Delete error:', error);
+        showToast(`Failed to delete certificate: ${error.message}`, 'error');
+        
+        // Restore button state on error
+        if (deleteBtn && originalText) {
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = originalText;
+            deleteBtn.style.opacity = '1';
+        }
+    }
+}
 
 // Show toast notification
 function showToast(message, type = 'info') {
