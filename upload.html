@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Upload Portal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <a href="/" class="nav-link">← Download Portal</a>
+    
+    <div class="main-container">
+        <div class="header">
+            <h1>Certificate Upload Portal</h1>
+            <p class="subtitle">Upload new certificates and manage existing ones</p>
+        </div>
+
+        <div class="upload-section">
+            <form id="uploadForm" class="upload-form">
+                <div class="form-group">
+                <label for="phoneNumber">Phone Number</label>
+                <input 
+                    type="tel" 
+                    id="phoneNumber" 
+                    name="phoneNumber" 
+                    placeholder="+234 (0) 7053 959 6589"
+                    required
+                />
+            </div>
+                <div class="form-group">
+                    <label for="displayName">Certificate Name</label>
+                    <input 
+                        type="text" 
+                        id="displayName" 
+                        name="displayName" 
+                        placeholder="e.g., Professional Certificate"
+                        required
+                    />
+                </div>
+                <div class="form-group full-width">
+                    <label for="certificateFile">Certificate File (PDF)</label>
+                    <input 
+                        type="file" 
+                        id="certificateFile" 
+                        name="certificateFile" 
+                        accept=".pdf"
+                        required
+                    />
+                    <div class="file-info">Only PDF files are accepted</div>
+                </div>
+                <div class="form-group full-width">
+                    <button type="submit" class="upload-btn" id="uploadBtn">
+                        <div class="loading" id="uploadLoading"></div>
+                        <span id="uploadBtnText">Upload Certificate</span>
+                    </button>
+                </div>
+            </form>
+            <div class="message" id="uploadMessage"></div>
+        </div>
+
+        <div class="certificates-list">
+            <div class="list-header">Existing Certificates</div>
+            <div id="certificatesList">
+                <div class="empty-state">Loading certificates...</div>
+            </div>
+        </div>
+    </div>
+<script src="certificates.js"></script>
+<script>
+const uploadForm = document.getElementById('uploadForm');
+const phoneInput = document.getElementById('phoneNumber');
+const displayNameInput = document.getElementById('displayName');
+const fileInput = document.getElementById('certificateFile');
+const uploadBtn = document.getElementById('uploadBtn');
+const uploadLoading = document.getElementById('uploadLoading');
+const uploadBtnText = document.getElementById('uploadBtnText');
+const uploadMessage = document.getElementById('uploadMessage');
+const certificatesList = document.getElementById('certificatesList');
+        phoneInput.addEventListener('input', function(e) {
+            e.target.value = certificateManager.formatPhoneNumber(e.target.value);
+        });
+
+uploadForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    let phoneNumber = phoneInput.value.trim();
+    const displayName = displayNameInput.value.trim();
+    const file = fileInput.files[0];
+    clearMessage(uploadMessage);
+
+    if (!phoneNumber || !displayName || !file) {
+        showMessage(uploadMessage, 'Please fill in all fields and select a file', 'error');
+        return;
+    }
+    phoneNumber = normalizePhoneNumber(phoneNumber);
+
+    if (file.type !== 'application/pdf') {
+        showMessage(uploadMessage, 'Please select a PDF file', 'error');
+        return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        showMessage(uploadMessage, 'File size exceeds 5MB limit', 'error');
+        return;
+    }
+    setLoading(uploadLoading, uploadBtnText, uploadBtn, true, 'Uploading...', 'Upload Certificate');
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('phoneNumber', phoneNumber);
+        formData.append('displayName', displayName);
+
+        const response = await fetch('upload.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            showMessage(uploadMessage, `Certificate "${displayName}" uploaded successfully for ${phoneNumber}`, 'success');
+            uploadForm.reset();
+            setTimeout(() => {
+                loadCertificates();
+            }, 500);
+        } else {
+            showMessage(uploadMessage, result.message || 'Upload failed.', 'error');
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+        showMessage(uploadMessage, 'Upload failed. Please check your connection and try again.', 'error');
+    }
+    setLoading(uploadLoading, uploadBtnText, uploadBtn, false, 'Uploading...', 'Upload Certificate');
+});
+function normalizePhoneNumber(phone) {
+    let cleaned = phone.replace(/[^\d+]/g, '');
+    if (cleaned.startsWith('0')) {
+        cleaned = '+234' + cleaned.substring(1);
+    } else if (cleaned.startsWith('234') && !cleaned.startsWith('+234')) {
+        cleaned = '+' + cleaned;
+    } else if (!cleaned.startsWith('+')) {
+        cleaned = '+234' + cleaned;
+    }
+    return cleaned;
+}
+async function loadCertificates() {
+    try {
+        certificatesList.innerHTML = '<div class="empty-state">Loading certificates...</div>';
+        const res = await fetch('./data/certificates.json?' + Date.now());
+        if (!res.ok) {
+            if (res.status === 404) {
+                certificatesList.innerHTML = '<div class="empty-state">No certificates uploaded yet</div>';
+                return;
+            }
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        let certificates = [];
+        
+        if (Array.isArray(data)) {
+            certificates = data.map(cert => ({
+                phoneNumber: cert.phoneNumber,
+                ...cert
+            }));
+        } else {
+            // New format - convert object to array for easier processing
+            certificates = Object.keys(data).map(phoneNumber => ({
+                phoneNumber: phoneNumber,
+                ...data[phoneNumber]
+            }));
+        }
+
+        // Filter out deleted certificates
+        const activeCertificates = certificates.filter(cert => !cert.deleted);
+
+        if (activeCertificates.length === 0) {
+            certificatesList.innerHTML = '<div class="empty-state">No active certificates found</div>';
+            return;
+        }
+
+        // Sort certificates by display name
+        activeCertificates.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+        // Generate HTML for certificates
+        certificatesList.innerHTML = activeCertificates.map(cert => {
+            const remainingDownloads = cert.maxDownloads - cert.downloadCount;
+            const statusColor = remainingDownloads > 0 ? '#34c759' : '#ff3b30';
+            const statusText = remainingDownloads > 0 ? 'Active' : 'Expired';
+            const progressPercentage = Math.round((cert.downloadCount / cert.maxDownloads) * 100);
+            
+            return `
+                <div class="certificate-item" data-phone="${cert.phoneNumber}">
+                    <div class="cert-header">
+                        <div class="cert-info">
+                            <div class="cert-name">${escapeHtml(cert.displayName)}</div>
+                            <div class="cert-phone">${escapeHtml(cert.phoneNumber)}</div>
+                        </div>
+                         </div>
+                    <div class="cert-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Downloads:</span>
+                            <span class="stat-value"><strong>${cert.downloadCount}</strong> / ${cert.maxDownloads}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Remaining:</span>
+                            <span class="stat-value"><strong>${remainingDownloads}</strong></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">File:</span>
+                            <span class="stat-value"><strong>${escapeHtml(cert.filename)}</strong></span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Status:</span>
+                            <span class="stat-value"><strong style="color: ${statusColor}">${statusText}</strong></span>
+                        </div>
+                    </div>
+                    <div class="cert-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${progressPercentage}%; background-color: ${statusColor}"></div>
+                        </div>
+                        <span class="progress-text">${progressPercentage}% used</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error loading certificates:', error);
+        certificatesList.innerHTML = '<div class="error">Failed to load certificates. Please refresh the page.</div>';
+    }
+}
+
+
+
+// Show toast notification
+function showToast(message, type = 'info') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    
+    // Add to page
+    document.body.appendChild(toast);
+    
+    // Show toast
+    setTimeout(() => toast.classList.add('show'), 100);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => document.body.removeChild(toast), 300);
+    }, 3000);
+}
+
+// Simple message display
+function showMessage(target, text, type) {
+    target.className = `message ${type}`;
+    target.innerHTML = text;
+    target.classList.add('show');
+    
+    // Auto-hide success messages after 5 seconds
+    if (type === 'success') {
+        setTimeout(() => {
+            clearMessage(target);
+        }, 5000);
+    }
+}
+
+// Clear message
+function clearMessage(target) {
+    target.className = 'message';
+    target.innerHTML = '';
+    target.classList.remove('show');
+}
+
+// Simple loading toggle
+function setLoading(loadingEl, textEl, btnEl, isLoading, loadingText, defaultText) {
+    if (loadingEl) loadingEl.style.display = isLoading ? 'inline-block' : 'none';
+    if (btnEl) btnEl.disabled = isLoading;
+    if (textEl) textEl.textContent = isLoading ? loadingText : defaultText;
+}
+
+// HTML escape function to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Search/filter certificates
+function filterCertificates(searchTerm) {
+    const items = document.querySelectorAll('.certificate-item');
+    const term = searchTerm.toLowerCase();
+    
+    items.forEach(item => {
+        const name = item.querySelector('.cert-name').textContent.toLowerCase();
+        const phone = item.querySelector('.cert-phone').textContent.toLowerCase();
+        
+        if (name.includes(term) || phone.includes(term)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+// Refresh certificates list
+function refreshCertificates() {
+    showToast('Refreshing certificates...', 'info');
+    loadCertificates();
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Load certificates on page start
+    loadCertificates();
+    
+    // Add search functionality if search input exists
+    const searchInput = document.getElementById('certificateSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            filterCertificates(e.target.value);
+        });
+    }
+    
+    // Add refresh button functionality if it exists
+    const refreshBtn = document.getElementById('refreshBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', refreshCertificates);
+    }
+    
+    // Auto-refresh every 30 seconds
+    setInterval(loadCertificates, 30000);
+});
+
+// Handle page visibility change to refresh when page becomes visible
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        loadCertificates();
+    }
+});
+</script>
+</body>
+</html>

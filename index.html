@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Download Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #111111 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .logo svg {
+            width: 32px;
+            height: 32px;
+            fill: #ffffff;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #ffffff 0%, #888888 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888888;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        .form-group {
+            margin-bottom: 24px;
+        }
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+        input[type="tel"] {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #ffffff;
+            transition: all 0.2s ease;
+        }
+        input[type="tel"]:focus {
+            outline: none;
+            border-color: #0070f3;
+            box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
+        }
+        input[type="tel"]::placeholder {
+            color: #666666;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 500;
+            background: linear-gradient(135deg, #0070f3 0%, #0051cc 100%);
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .submit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(0, 112, 243, 0.3);
+        }
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .loading {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .message {
+            margin-top: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+        .message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .message.error {
+            background: rgba(255, 59, 48, 0.1);
+            border: 1px solid rgba(255, 59, 48, 0.3);
+            color: #ff3b30;
+        }
+        .message.success {
+            background: rgba(52, 199, 89, 0.1);
+            border: 1px solid rgba(52, 199, 89, 0.3);
+            color: #34c759;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 12px;
+            color: #666666;
+        }
+        .nav-link {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #888888;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s ease;
+        }
+        .nav-link:hover {
+            color: #ffffff;
+        }
+        .powered-text {
+  font-family: Arial, sans-serif;
+  font-size: 0.75rem;
+  color: #fff; /* adjust to match your section's text color */
+}
+
+.gold-text {
+  color: gold;
+  font-weight: bold;
+  text-shadow: 0 0 5px #ffd700, 0 0 10px #ffcc00, 0 0 20px #ff9900;
+  animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% {
+    text-shadow: 0 0 5px #ffd700, 0 0 10px #ffcc00, 0 0 20px #ff9900;
+  }
+  50% {
+    text-shadow: 0 0 20px #ffd700, 0 0 30px #ffcc00, 0 0 40px #ff9900;
+  }
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <svg viewBox="0 0 116 100" fill="none">
+                <path d="M57.5 0L115 100H0L57.5 0Z"/>
+            </svg>
+        </div>
+        
+        <h1>Certificate Portal</h1>
+        <p class="subtitle">Enter your phone number to download your certificate</p>
+        
+        <form id="phoneForm">
+            <div class="form-group">
+                <label for="phoneNumber">Phone Number</label>
+                <input 
+                    type="tel" 
+                    id="phoneNumber" 
+                    name="phoneNumber" 
+                    placeholder="+234 (0) 7053 959 6589"
+                    required
+                />
+            </div>
+            
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <div class="loading" id="loading"></div>
+                <span id="btnText">Download Certificate</span>
+            </button>
+        </form>
+        
+        <div class="message" id="message"></div>
+        
+        <div class="footer powered-text">
+  Powered by <span class="gold-text">BABOSAMMO ng</span>
+        </div>
+    </div>
+    <script src="certificates.js"></script>
+    <script>
+        const phoneForm = document.getElementById('phoneForm');
+        const phoneInput = document.getElementById('phoneNumber');
+        const submitBtn = document.getElementById('submitBtn');
+        const loading = document.getElementById('loading');
+        const btnText = document.getElementById('btnText');
+        const message = document.getElementById('message');
+
+        // Format phone number as user types
+        phoneInput.addEventListener('input', function(e) {
+            e.target.value = certificateManager.formatPhoneNumber(e.target.value);
+        });
+        phoneForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const phoneNumber = phoneInput.value.trim();
+            if (!phoneNumber) {
+                showMessage(message, 'Please enter a phone number', 'error');
+                return;
+            }
+            setLoading(loading, btnText, submitBtn, true, 'Searching...', 'Download Certificate');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            try {
+                const result = await certificateManager.processCertificateDownload(phoneNumber);
+                if (result.remainingDownloads > 0) {
+                    showMessage(message, `${result.certificate.displayName} downloaded successfully! ${result.remainingDownloads} downloads remaining.`, 'success');
+                } else {
+                    showMessage(message, `${result.certificate.displayName} downloaded successfully! <br> This was the final download.`, 'success');
+                }
+            } catch (error) {
+                showMessage(message, error.message, 'error');
+            }
+            setLoading(loading, btnText, submitBtn, false, 'Searching...', 'Download Certificate');
+        });
+        phoneInput.addEventListener('input', function() {
+            message.classList.remove('show');
+        });
+    </script>
+</body>
+</html>

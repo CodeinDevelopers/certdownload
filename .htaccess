@@ -1,0 +1,41 @@
+# .htaccess file for certificates directory security
+
+# Increase upload limits
+php_value upload_max_filesize 5M
+php_value post_max_size 5M
+php_value max_execution_time 300
+php_value max_input_time 300
+
+# Security: Prevent direct access to certificate files
+<Files "*.pdf">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# Allow PHP files to run
+<Files "*.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
+# Redirect URLs with .html to the version without .html
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /([^.]+)\.html\ HTTP
+RewriteRule ^([^.]+)\.html$ /$1 [R=301,L]
+
+# If the request is for a directory that exists, leave it alone
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# If the request is for a file that exists, leave it alone
+RewriteCond %{REQUEST_FILENAME} !-f
+
+# Check if the requested URL with .html extension exists
+RewriteCond %{REQUEST_FILENAME}.html -f
+# If it exists, internally rewrite to the .html version
+RewriteRule ^(.*)$ $1.html [L]
+# Prevent directory listing
+Options -Indexes
+
+# Custom error pages (optional)
+ErrorDocument 403 "Access Denied"
+ErrorDocument 404 "File Not Found"
+
+
