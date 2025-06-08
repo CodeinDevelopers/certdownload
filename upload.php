@@ -101,7 +101,7 @@ try {
         'displayName' => $displayName,
         'path' => $filepath,
         'downloadCount' => 0,
-        'maxDownloads' => 1,
+        'maxDownloads' => 5,
         'deleted' => false
     ];
 
