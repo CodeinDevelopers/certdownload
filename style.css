@@ -12,47 +12,68 @@
             padding: 20px;
         }
 
-        .nav-link {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            color: #888888;
-            text-decoration: none;
-            font-size: 14px;
-            transition: color 0.2s ease;
-            z-index: 1000;
-        }
+     .nav-link {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    color: #888888;
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s ease;
+    z-index: 1000;
+}
 
-        .nav-link:hover {
-            color: #ffffff;
-        }
+.nav-link:hover {
+    color: #ffffff;
+}
 
-        .main-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding-top: 60px;
-        }
+/* NEW: Logout button CSS */
+.logout-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    color: #888888;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    z-index: 1000;
+    padding: 8px 16px;
+    border: 1px solid #444444;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.05);
+}
 
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
+.logout-btn:hover {
+    color: #ffffff;
+    border-color: #888888;
+    background-color: rgba(255, 255, 255, 0.1);
+}
 
-        .header h1 {
-            font-size: 32px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            background: linear-gradient(135deg, #ffffff 0%, #888888 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+.main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-top: 60px;
+}
 
-        .header .subtitle {
-            color: #888888;
-            font-size: 16px;
-        }
+.header {
+    text-align: center;
+    margin-bottom: 40px;
+}
 
+.header h1 {
+    font-size: 32px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #ffffff 0%, #888888 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.header .subtitle {
+    color: #888888;
+    font-size: 16px;
+}
         .upload-section {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);

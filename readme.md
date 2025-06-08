@@ -89,7 +89,7 @@ For support and questions, please contact:
 
 ## Changelog
 
-### Version 3.0.0
+### Version 4.0.0
 - Initial release
 - Basic certificate download functionality
 - Responsive design implementation

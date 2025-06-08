@@ -1,3 +1,11 @@
+<?php
+require_once 'auth.php';
+protectPage('login.php');
+if (!checkAuthTimeout(30)) {
+    header('Location: login.php');
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,7 +48,8 @@
         }</style>
 </head>
 <body>
-    <a href="index.html" class="nav-link">← Download Portal</a>
+     <a href="index.html" class="nav-link">← Download Portal</a>
+    <a href="logout.php" class="logout-btn">Logout</a>
     
     <div class="main-container">
         <div class="header">

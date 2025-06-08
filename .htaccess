@@ -1,5 +1,7 @@
 # .htaccess file for certificates directory security
 
+RewriteEngine On
+
 # Increase upload limits
 php_value upload_max_filesize 5M
 php_value post_max_size 5M
@@ -17,20 +19,13 @@ php_value max_input_time 300
     Order Allow,Deny
     Allow from all
 </Files>
-# Redirect URLs with .html to the version without .html
-RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /([^.]+)\.html\ HTTP
-RewriteRule ^([^.]+)\.html$ /$1 [R=301,L]
 
-# If the request is for a directory that exists, leave it alone
-RewriteCond %{REQUEST_FILENAME} !-d
+# Protect .env file
+<Files ".env">
+    Order allow,deny
+    Deny from all
+</Files>
 
-# If the request is for a file that exists, leave it alone
-RewriteCond %{REQUEST_FILENAME} !-f
-
-# Check if the requested URL with .html extension exists
-RewriteCond %{REQUEST_FILENAME}.html -f
-# If it exists, internally rewrite to the .html version
-RewriteRule ^(.*)$ $1.html [L]
 # Prevent directory listing
 Options -Indexes
 
@@ -38,4 +33,15 @@ Options -Indexes
 ErrorDocument 403 "Access Denied"
 ErrorDocument 404 "File Not Found"
 
+# Simple URL rewriting for PHP files
+# If file doesn't exist, check for .php version
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*)$ $1.php [L]
 
+# If file doesn't exist, check for .html version
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.*)$ $1.html [L]
