@@ -139,19 +139,6 @@ try {
     // Output the file
     readfile($cert['path']);
     
-    // Delete the file from server if this was the final download
-    if ($isFinalDownload) {
-        if (file_exists($filePath)) {
-            if (unlink($filePath)) {
-                error_log("Certificate file deleted after final download: " . $filePath);
-            } else {
-                error_log("Failed to delete certificate file: " . $filePath);
-            }
-        }
-    }
-    
-    exit;
-    
 } catch (Exception $e) {
     error_log("Certificate download error: " . $e->getMessage());
     http_response_code(500);
