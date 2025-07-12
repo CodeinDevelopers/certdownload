@@ -12,7 +12,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     ]);
     exit;
 }
-// fix this soon this is wrong.
 try {
     if (!isAuthenticated()) {
         http_response_code(401);
@@ -30,6 +29,13 @@ try {
             'message' => 'Unable to retrieve user data'
         ]);
         exit;
+    }
+    if (!isset($_POST['imei']) || empty(trim($_POST['imei']))) {
+        throw new Exception('IMEI is required');
+    }
+    $imei = trim($_POST['imei']);
+    if (!preg_match('/^\d{15}$/', $imei)) {
+        throw new Exception('Invalid IMEI format. IMEI must be exactly 15 digits');
     }
     if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
         $error_message = 'No file uploaded';
@@ -49,26 +55,44 @@ try {
         }
         throw new Exception($error_message);
     }
-
     $file = $_FILES['file'];
     $maxSize = 5 * 1024 * 1024;
-    $allowedTypes = ['application/pdf'];
+    
+    // Updated to support multiple file types
+    $allowedTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/jpg',
+        'image/png'
+    ];
+    
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mimeType = finfo_file($finfo, $file['tmp_name']);
     finfo_close($finfo);
-
+    
+    // Handle edge cases where MIME type detection might vary
+    if ($mimeType === 'image/jpg') {
+        $mimeType = 'image/jpeg';
+    }
+    
     if (!in_array($mimeType, $allowedTypes)) {
-        throw new Exception('Only PDF files are allowed');
+        throw new Exception('Only PDF, JPG, JPEG, and PNG files are allowed. Detected file type: ' . $mimeType);
     }
     if ($file['size'] > $maxSize) {
         throw new Exception('File size exceeds 5MB limit');
     }
     $pdo = DatabaseConfig::getConnection();
-    $checkStmt = $pdo->prepare("SELECT id FROM certificates WHERE user_id = ? AND deleted = 0");
-    $checkStmt->execute([$currentUser['id']]);
+    $checkUserStmt = $pdo->prepare("SELECT id FROM certificates WHERE user_id = ? AND deleted = 0");
+    $checkUserStmt->execute([$currentUser['id']]);
     
-    if ($checkStmt->fetch()) {
+    if ($checkUserStmt->fetch()) {
         throw new Exception('You already have a certificate uploaded. Please delete the existing one before uploading a new one.');
+    }
+    $checkImeiStmt = $pdo->prepare("SELECT id, user_id FROM certificates WHERE imei = ? AND deleted = 0");
+    $checkImeiStmt->execute([$imei]);
+    $existingImei = $checkImeiStmt->fetch();
+    if ($existingImei && $existingImei['user_id'] != $currentUser['id']) {
+        throw new Exception('This IMEI is already associated with another certificate');
     }
     $uploadDir = './certificates/';
     if (!file_exists($uploadDir)) {
@@ -76,29 +100,47 @@ try {
             throw new Exception('Failed to create upload directory');
         }
     }
+    
+    // Generate filename with proper extension based on MIME type
     $timestamp = time();
     $randomNum = rand(100, 999);
-    $filename = "cert_{$currentUser['id']}_{$timestamp}_{$randomNum}.pdf";
+    
+    $extension = '';
+    switch ($mimeType) {
+        case 'application/pdf':
+            $extension = '.pdf';
+            break;
+        case 'image/jpeg':
+            $extension = '.jpg';
+            break;
+        case 'image/png':
+            $extension = '.png';
+            break;
+        default:
+            $extension = '.pdf'; // fallback
+    }
+    
+    $filename = "cert_{$currentUser['id']}_{$timestamp}_{$randomNum}{$extension}";
     $filepath = $uploadDir . $filename;
     if (!move_uploaded_file($file['tmp_name'], $filepath)) {
         throw new Exception('Failed to save uploaded file');
     }
     $insertStmt = $pdo->prepare("
         INSERT INTO certificates 
-        (user_id, filename, original_filename, file_path, file_size, mime_type, download_count, max_downloads, deleted, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, 0, 5, 0, NOW(), NOW())
+        (user_id, imei, filename, original_filename, file_path, file_size, mime_type, download_count, max_downloads, deleted, created_at, updated_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0, 5, 0, NOW(), NOW())
     ");
     $insertStmt->execute([
         $currentUser['id'],
+        $imei,
         $filename,
         $file['name'],
         $filepath,
         $file['size'],
         $mimeType
     ]);
-
     $certificateId = $pdo->lastInsertId();
-    $logEntry = date('Y-m-d H:i:s') . " - Uploaded: {$filename} for User ID: {$currentUser['id']} ({$currentUser['firstname']} {$currentUser['lastname']}) - Mobile: {$currentUser['mobile']}\n";
+    $logEntry = date('Y-m-d H:i:s') . " - Uploaded: {$filename} for User ID: {$currentUser['id']} ({$currentUser['firstname']} {$currentUser['lastname']}) - Mobile: {$currentUser['mobile']} - IMEI: {$imei} - Type: {$mimeType}\n";
     file_put_contents('./upload_log.txt', $logEntry, FILE_APPEND | LOCK_EX);
     echo json_encode([
         'success' => true,
@@ -106,17 +148,17 @@ try {
         'filename' => $filename,
         'original_filename' => $file['name'],
         'file_size' => $file['size'],
+        'mime_type' => $mimeType,
+        'imei' => $imei,
         'user_name' => $currentUser['firstname'] . ' ' . $currentUser['lastname'],
         'user_mobile' => $currentUser['mobile'],
         'upload_date' => date('c'),
         'message' => 'Certificate uploaded successfully'
     ]);
-
 } catch (Exception $e) {
     if (isset($filepath) && file_exists($filepath)) {
         unlink($filepath);
     }
-    
     http_response_code(400);
     echo json_encode([
         'success' => false,

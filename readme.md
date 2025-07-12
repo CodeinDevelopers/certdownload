@@ -90,9 +90,6 @@ For support and questions, please contact:
 ## Changelog
 
 ### Version 4.0.0
-- Initial release
-- Basic certificate download functionality
-- Responsive design implementation
 
 ## Known Issues
 - None currently reported

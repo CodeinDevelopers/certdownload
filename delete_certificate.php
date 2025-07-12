@@ -1,10 +1,9 @@
 <?php
+require_once 'auth.php';
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
-
-// Check if request is POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode([
@@ -13,100 +12,90 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     ]);
     exit;
 }
-
 try {
-    // Validate required field
-    if (empty($_POST['phoneNumber'])) {
-        throw new Exception('Phone number is required');
+    if (!isAuthenticated()) {
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'message' => 'User not authenticated. Please log in first.'
+        ]);
+        exit;
+    }
+    $currentUser = getCurrentUser();
+    if (!$currentUser) {
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Unable to retrieve user data'
+        ]);
+        exit;
+    }
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!isset($input['certificate_id']) || empty($input['certificate_id'])) {
+        throw new Exception('Certificate ID is required');
     }
 
-    $phoneNumber = trim($_POST['phoneNumber']);
-    $action = $_POST['action'] ?? 'soft'; // 'soft' for marking as deleted, 'permanent' for complete removal
-    $jsonFile = './data/certificates.json';
-
-    // Check if certificates.json exists
-    if (!file_exists($jsonFile)) {
-        throw new Exception('No certificates found');
+    $certificateId = intval($input['certificate_id']);
+    
+    if ($certificateId <= 0) {
+        throw new Exception('Invalid certificate ID');
     }
-
-    // Load certificates data
-    $certificates = json_decode(file_get_contents($jsonFile), true);
-    if (!$certificates) {
-        throw new Exception('Failed to read certificates data');
+    $pdo = DatabaseConfig::getConnection();
+    $checkStmt = $pdo->prepare("
+        SELECT id, user_id, filename, original_filename, file_path, imei, deleted 
+        FROM certificates 
+        WHERE id = ? AND deleted = 0
+    ");
+    $checkStmt->execute([$certificateId]);
+    $certificate = $checkStmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$certificate) {
+        throw new Exception('Certificate not found or already deleted');
     }
-
-    // Check if phone number exists
-    if (!isset($certificates[$phoneNumber])) {
-        throw new Exception('No certificate found for this phone number');
+    if ($certificate['user_id'] != $currentUser['id']) {
+        throw new Exception('You do not have permission to delete this certificate');
     }
-
-    $certificateData = $certificates[$phoneNumber];
-    $filename = $certificateData['filename'];
-    $filepath = $certificateData['path'];
-    $displayName = $certificateData['displayName'];
-
-    if ($action === 'permanent') {
-        // Permanent deletion - remove file and database entry
-        
-        // Check if certificate is marked as deleted (should be for permanent delete)
-        if (!isset($certificateData['deleted']) || $certificateData['deleted'] !== true) {
-            throw new Exception('Certificate must be deleted first before permanent removal');
+    $pdo->beginTransaction();
+    try {
+        $deleteStmt = $pdo->prepare("
+            UPDATE certificates 
+            SET deleted = 1, updated_at = NOW() 
+            WHERE id = ? AND user_id = ? AND deleted = 0
+        ");
+        $deleteStmt->execute([$certificateId, $currentUser['id']]);
+        if ($deleteStmt->rowCount() === 0) {
+            throw new Exception('Failed to delete certificate from database. Certificate may already be deleted or does not exist.');
         }
-
-        // Delete the physical file
-        if (file_exists($filepath)) {
-            if (!unlink($filepath)) {
-                throw new Exception('Failed to delete certificate file');
-            }
+        $verifyStmt = $pdo->prepare("SELECT deleted FROM certificates WHERE id = ?");
+        $verifyStmt->execute([$certificateId]);
+        $verifyResult = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$verifyResult || $verifyResult['deleted'] != 1) {
+            throw new Exception('Database update verification failed');
         }
-
-        // Remove entry from certificates array
-        unset($certificates[$phoneNumber]);
-
-        // Log the permanent deletion
-        $logEntry = date('Y-m-d H:i:s') . " - Permanently deleted: {$filename} for {$phoneNumber} ({$displayName})\n";
-        file_put_contents('./delete_log.txt', $logEntry, FILE_APPEND | LOCK_EX);
-
-        $message = 'Certificate permanently deleted successfully';
-        $actionType = 'permanent';
-
-    } else {
-        // Soft deletion - just mark as deleted
-        
-        // Check if already soft deleted
-        if (isset($certificateData['deleted']) && $certificateData['deleted'] === true) {
-            throw new Exception('Certificate has already been deleted');
+        $filePath = $certificate['file_path'];
+        if (file_exists($filePath)) {
+            // Optional: You could rename the file to indicate it's "deleted"
+            // $deletedPath = $filePath . '.deleted.' . time();
+            // rename($filePath, $deletedPath);
+            error_log("Info: Physical file preserved for deleted certificate: {$filePath}");
         }
-
-        // Mark as deleted (soft delete)
-        $certificates[$phoneNumber]['deleted'] = true;
-        $certificates[$phoneNumber]['deletedDate'] = date('c');
-
-        // Log the soft deletion
-        $logEntry = date('Y-m-d H:i:s') . " - Soft deleted: {$filename} for {$phoneNumber} ({$displayName})\n";
-        file_put_contents('./delete_log.txt', $logEntry, FILE_APPEND | LOCK_EX);
-
-        $message = 'Certificate moved to past certificates';
-        $actionType = 'soft';
+        $pdo->commit();
+        $logEntry = date('Y-m-d H:i:s') . " - SOFT DELETED: {$certificate['filename']} (Original: {$certificate['original_filename']}) for User ID: {$currentUser['id']} ({$currentUser['firstname']} {$currentUser['lastname']}) - Mobile: {$currentUser['mobile']} - IMEI: {$certificate['imei']} - File preserved at: {$certificate['file_path']}\n";
+        file_put_contents('./deletion_log.txt', $logEntry, FILE_APPEND | LOCK_EX);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Certificate deleted successfully (file preserved)',
+            'certificate_id' => $certificateId,
+            'filename' => $certificate['original_filename'] ?: $certificate['filename'],
+            'deleted_at' => date('c'),
+            'file_preserved' => true
+        ]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        throw $e;
     }
-
-    // Save updated JSON
-    if (!file_put_contents($jsonFile, json_encode($certificates, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))) {
-        throw new Exception('Failed to update certificate data');
-    }
-
-    // Return success response
-    echo json_encode([
-        'success' => true,
-        'phoneNumber' => $phoneNumber,
-        'filename' => $filename,
-        'displayName' => $displayName,
-        'action' => $actionType,
-        'deletedDate' => date('c'),
-        'message' => $message
-    ]);
-
 } catch (Exception $e) {
+    error_log("Delete certificate error: " . $e->getMessage());
     http_response_code(400);
     echo json_encode([
         'success' => false,
