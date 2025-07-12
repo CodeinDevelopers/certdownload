@@ -101,8 +101,6 @@ $currentUser = getCurrentUser();
             <div class="message" id="uploadMessage"></div>
         </div>
     </div>
-
-    <!-- Confirmation Modal -->
     <div id="confirmModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-title">Confirm Deletion</div>
@@ -131,18 +129,13 @@ $currentUser = getCurrentUser();
         const certificatesList = document.getElementById('certificatesList');
         const searchInput = document.getElementById('searchInput');
         const clearSearchBtn = document.getElementById('clearSearch');
-        
-        // Modal elements
         const confirmModal = document.getElementById('confirmModal');
         const modalFilename = document.getElementById('modalFilename');
         const cancelBtn = document.getElementById('cancelBtn');
         const confirmBtn = document.getElementById('confirmBtn');
         const confirmBtnText = document.getElementById('confirmBtnText');
-        
-        // Store all certificates for filtering
         let allCertificates = [];
         let certificateToDelete = null;
-        
         uploadForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const file = fileInput.files[0];
@@ -212,8 +205,6 @@ $currentUser = getCurrentUser();
             
             setLoading(uploadLoading, uploadBtnText, uploadBtn, false, 'Uploading...', 'Upload Certificate');
         });
-        
-        // Search functionality
         searchInput.addEventListener('input', function() {
             const query = this.value.trim();
             if (query) {
@@ -224,39 +215,30 @@ $currentUser = getCurrentUser();
                 displayCertificates(allCertificates);
             }
         });
-        
         clearSearchBtn.addEventListener('click', function() {
             searchInput.value = '';
             clearSearchBtn.style.display = 'none';
             displayCertificates(allCertificates);
             searchInput.focus();
         });
-        
-        // Delete functionality
         function showDeleteConfirmation(certificate) {
             certificateToDelete = certificate;
             modalFilename.textContent = certificate.original_filename || certificate.filename;
             confirmModal.classList.add('show');
             document.body.style.overflow = 'hidden';
         }
-        
         function hideDeleteConfirmation() {
             confirmModal.classList.remove('show');
             document.body.style.overflow = 'auto';
             certificateToDelete = null;
         }
-        
-        // Download functionality
         async function downloadCertificate(certificate) {
             try {
                 const remainingDownloads = certificate.max_downloads - certificate.download_count;
-                
                 if (remainingDownloads <= 0) {
                     showToast('Certificate download limit exceeded!', 'error');
                     return;
                 }
-                
-                // Show confirmation if this is the last download
                 if (remainingDownloads === 1) {
                     const confirmDownload = confirm(
                         `This is your last download for this certificate. After downloading, you won't be able to download it again. Continue?`
@@ -265,9 +247,7 @@ $currentUser = getCurrentUser();
                         return;
                     }
                 }
-                
                 showToast('Starting download...', 'info');
-                
                 const response = await fetch('download_certificate.php', {
                     method: 'POST',
                     headers: {
@@ -277,16 +257,11 @@ $currentUser = getCurrentUser();
                         certificate_id: certificate.id
                     })
                 });
-                
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.error || 'Download failed');
                 }
-                
-                // Get the file blob
                 const blob = await response.blob();
-                
-                // Create download link
                 const downloadUrl = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = downloadUrl;
@@ -295,10 +270,7 @@ $currentUser = getCurrentUser();
                 a.click();
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(downloadUrl);
-                
                 showToast('Download completed successfully!', 'success');
-                
-                // Refresh certificates list to update download count
                 setTimeout(() => {
                     loadCertificates();
                 }, 1000);
@@ -308,8 +280,6 @@ $currentUser = getCurrentUser();
                 showToast('Download failed: ' + error.message, 'error');
             }
         }
-        
-        // Modal event listeners
         cancelBtn.addEventListener('click', hideDeleteConfirmation);
         
         confirmModal.addEventListener('click', function(e) {
@@ -317,14 +287,10 @@ $currentUser = getCurrentUser();
                 hideDeleteConfirmation();
             }
         });
-        
         confirmBtn.addEventListener('click', async function() {
             if (!certificateToDelete) return;
-            
-            // Disable button and show loading
             confirmBtn.disabled = true;
             confirmBtnText.textContent = 'Deleting...';
-            
             try {
                 const response = await fetch('delete_certificate.php', {
                     method: 'POST',
@@ -335,13 +301,10 @@ $currentUser = getCurrentUser();
                         certificate_id: certificateToDelete.id
                     })
                 });
-                
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
                 const result = await response.json();
-                
                 if (result.success) {
                     showToast('Certificate deleted successfully', 'success');
                     hideDeleteConfirmation();
@@ -353,19 +316,14 @@ $currentUser = getCurrentUser();
                 console.error('Delete error:', error);
                 showToast('Failed to delete certificate. Please try again.', 'error');
             }
-            
-            // Re-enable button
             confirmBtn.disabled = false;
             confirmBtnText.textContent = 'Delete';
         });
-        
-        // Toast notification
         function showToast(message, type) {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.textContent = message;
             document.body.appendChild(toast);
-            
             setTimeout(() => {
                 toast.classList.add('show');
             }, 100);
@@ -377,7 +335,6 @@ $currentUser = getCurrentUser();
                 }, 300);
             }, 3000);
         }
-        
         function filterCertificates(query) {
             const filteredCertificates = allCertificates.filter(cert => {
                 const filename = (cert.original_filename || cert.filename || '').toLowerCase();
@@ -386,10 +343,8 @@ $currentUser = getCurrentUser();
                 
                 return filename.includes(searchQuery) || imei.includes(searchQuery);
             });
-            
             displayCertificates(filteredCertificates);
         }
-        
         function displayCertificates(certificates) {
             if (certificates.length === 0) {
                 const query = searchInput.value.trim();
@@ -402,11 +357,9 @@ $currentUser = getCurrentUser();
                 certificatesList.innerHTML = generateCertificateHTML(certificates);
             }
         }
-        
         async function loadCertificates() {
             try {
                 certificatesList.innerHTML = '<div class="empty-state">Loading files...</div>';
-                
                 const response = await fetch('get_certificates.php?' + Date.now());
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -416,16 +369,11 @@ $currentUser = getCurrentUser();
                     }
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
                 const data = await response.json();
-                
                 if (!data.success) {
                     throw new Error(data.message || 'Failed to load certificates');
                 }
-                
                 allCertificates = data.certificates || [];
-                
-                // Apply current search filter if any
                 const query = searchInput.value.trim();
                 if (query) {
                     filterCertificates(query);
@@ -437,7 +385,6 @@ $currentUser = getCurrentUser();
                 certificatesList.innerHTML = '<div class="empty-state">Unable to load files. Please refresh the page.</div>';
             }
         }
-
         function generateCertificateHTML(certificates) {
             return certificates.map(cert => {
                 const remainingDownloads = cert.max_downloads - cert.download_count;
@@ -445,7 +392,6 @@ $currentUser = getCurrentUser();
                 const statusText = remainingDownloads > 0 ? 'Active' : 'Expired';
                 const progressPercentage = Math.round((cert.download_count / cert.max_downloads) * 100);
                 const canDownload = remainingDownloads > 0;
-                
                 return `
                     <div class="certificate-item">
                         <div class="cert-header">
@@ -487,7 +433,6 @@ $currentUser = getCurrentUser();
                 `;
             }).join('');
         }
-
         function showMessage(target, text, type) {
             target.className = `message ${type}`;
             target.innerHTML = text;
@@ -499,38 +444,30 @@ $currentUser = getCurrentUser();
                 }, 5000);
             }
         }
-        
         function clearMessage(target) {
             target.className = 'message';
             target.innerHTML = '';
             target.classList.remove('show');
         }
-        
         function setLoading(loadingEl, textEl, btnEl, isLoading, loadingText, defaultText) {
             if (loadingEl) loadingEl.style.display = isLoading ? 'inline-block' : 'none';
             if (btnEl) btnEl.disabled = isLoading;
             if (textEl) textEl.textContent = isLoading ? loadingText : defaultText;
         }
-        
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
-        
-        // Escape key to close modal
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' && confirmModal.classList.contains('show')) {
                 hideDeleteConfirmation();
             }
         });
-        
         document.addEventListener('DOMContentLoaded', function() {
             loadCertificates();
         });
-        
         setInterval(loadCertificates, 30000);
-        
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) {
                 loadCertificates();

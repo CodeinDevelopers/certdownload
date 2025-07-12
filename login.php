@@ -1,6 +1,5 @@
 <?php
 require_once 'auth.php';
-
 $error = '';
 $success = '';
 if (!isset($_SESSION['failed_attempts'])) {
@@ -282,8 +281,6 @@ input[type="email"]:disabled {
     padding: 8px 12px;
     border-radius: 6px;
 }
-
-/* Loading animation */
 .loading {
     display: inline-block;
     width: 20px;
@@ -299,8 +296,6 @@ input[type="email"]:disabled {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-
-/* Responsive Design */
 @media (max-width: 480px) {
     body {
         padding: 16px;

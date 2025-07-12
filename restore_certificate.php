@@ -3,8 +3,6 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
-
-// Function to send JSON response and exit
 function sendResponse($success, $message, $data = [], $httpCode = 200) {
     http_response_code($httpCode);
     $response = [
@@ -18,7 +16,6 @@ function sendResponse($success, $message, $data = [], $httpCode = 200) {
     exit;
 }
 
-// Check if request is POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendResponse(false, 'Method not allowed', [], 405);
 }
