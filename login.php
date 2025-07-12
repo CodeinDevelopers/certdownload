@@ -1,46 +1,32 @@
 <?php
-// login.php - Login form and handler with lockout mechanism
-// Include the main auth functions
 require_once 'auth.php';
 
 $error = '';
 $success = '';
-
-// Initialize session variables for lockout system
 if (!isset($_SESSION['failed_attempts'])) {
     $_SESSION['failed_attempts'] = 0;
 }
 if (!isset($_SESSION['lockout_time'])) {
     $_SESSION['lockout_time'] = null;
 }
-
-// Function to check if user is locked out
 function isLockedOut() {
     if ($_SESSION['failed_attempts'] >= 3 && $_SESSION['lockout_time'] !== null) {
-        $lockoutDuration = 10 * 60; // 10 minutes in seconds
+        $lockoutDuration = 10 * 60;
         $currentTime = time();
-        
-        // Check if lockout period has expired
         if (($currentTime - $_SESSION['lockout_time']) >= $lockoutDuration) {
-            // Reset failed attempts and lockout time
             $_SESSION['failed_attempts'] = 0;
             $_SESSION['lockout_time'] = null;
             return false;
         }
-        
         return true;
     }
-    
     return false;
 }
-
-// Function to get remaining lockout time
 function getRemainingLockoutTime() {
     if ($_SESSION['lockout_time'] !== null) {
-        $lockoutDuration = 10 * 60; // 10 minutes in seconds
+        $lockoutDuration = 10 * 60;
         $elapsed = time() - $_SESSION['lockout_time'];
         $remaining = $lockoutDuration - $elapsed;
-        
         if ($remaining > 0) {
             $minutes = floor($remaining / 60);
             $seconds = $remaining % 60;
@@ -49,45 +35,31 @@ function getRemainingLockoutTime() {
     }
     return "0:00";
 }
-
-// Check current lockout status
 $currentlyLockedOut = isLockedOut();
 $remainingTime = $currentlyLockedOut ? getRemainingLockoutTime() : null;
-
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Check if user is locked out
     if ($currentlyLockedOut) {
         $error = "Account locked due to multiple failed attempts. Please try again in $remainingTime.";
     } else {
         $mobile = trim($_POST['mobile'] ?? '');
         $email = trim($_POST['email'] ?? '');
-        
         if (empty($mobile) || empty($email)) {
             $error = 'Please enter both mobile number and email address.';
         } else {
             try {
-                // Note: authenticateUser() from auth.php already sets session variables
                 $user = authenticateUser($mobile, $email);
                 
                 if ($user) {
-                    // Reset failed attempts on successful login
                     $_SESSION['failed_attempts'] = 0;
                     $_SESSION['lockout_time'] = null;
-                    
                     $success = 'Authentication successful!';
-                    
-                    // Redirect to originally requested page or default
                     $redirectTo = $_SESSION['redirect_after_login'] ?? 'upload-file.php';
                     unset($_SESSION['redirect_after_login']);
                     
                     header("Location: $redirectTo");
                     exit();
                 } else {
-                    // Increment failed attempts
                     $_SESSION['failed_attempts']++;
-                    
-                    // Set lockout time if this is the 3rd failed attempt
                     if ($_SESSION['failed_attempts'] >= 3) {
                         $_SESSION['lockout_time'] = time();
                         $error = 'Account locked due to 3 failed login attempts. Please try again in 10 minutes.';
@@ -99,9 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             } catch (Exception $e) {
-                // Increment failed attempts for exceptions too
                 $_SESSION['failed_attempts']++;
-                
                 if ($_SESSION['failed_attempts'] >= 3) {
                     $_SESSION['lockout_time'] = time();
                     $error = 'Account locked due to multiple failed attempts. Please try again in 10 minutes.';
@@ -115,7 +85,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -252,23 +221,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-bottom: 1rem;
         }
     </style>
-    
     <?php if ($currentlyLockedOut): ?>
     <script>
-        // Auto-refresh countdown timer for lockout
         let remainingSeconds = <?php 
             $lockoutDuration = 10 * 60;
             $elapsed = time() - $_SESSION['lockout_time'];
             $remaining = $lockoutDuration - $elapsed;
             echo max(0, $remaining);
         ?>;
-        
         function updateTimer() {
             if (remainingSeconds <= 0) {
                 location.reload();
                 return;
             }
-            
             const minutes = Math.floor(remainingSeconds / 60);
             const seconds = remainingSeconds % 60;
             const timerElement = document.getElementById('lockout-timer');
@@ -276,10 +241,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (timerElement) {
                 timerElement.textContent = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
             }
-            
             remainingSeconds--;
         }
-        
         setInterval(updateTimer, 1000);
     </script>
     <?php endif; ?>
@@ -290,7 +253,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h2>🔒 Protected Area</h2>
             <p>Please enter your mobile number and email to continue</p>
         </div>
-        
         <?php if ($currentlyLockedOut): ?>
             <div class="lockout-info">
                 <strong>Account Locked</strong><br>
@@ -298,21 +260,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span class="lockout-timer" id="lockout-timer"><?php echo $remainingTime; ?></span>
             </div>
         <?php endif; ?>
-        
         <?php if ($error): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
-        
         <?php if ($success): ?>
             <div class="success"><?php echo htmlspecialchars($success); ?></div>
         <?php endif; ?>
-        
         <?php if (!$currentlyLockedOut && $_SESSION['failed_attempts'] > 0): ?>
             <div class="attempts-info">
                 Failed attempts: <?php echo $_SESSION['failed_attempts']; ?>/3
             </div>
         <?php endif; ?>
-        
         <form method="POST" action="">
             <div class="form-group">
                 <label for="mobile">Mobile Number:</label>
@@ -325,7 +283,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        value="<?php echo htmlspecialchars($_POST['mobile'] ?? ''); ?>"
                        <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
             </div>
-            
             <div class="form-group">
                 <label for="email">Email Address:</label>
                 <input type="email" 
@@ -336,7 +293,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
                        <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
             </div>
-            
             <button type="submit" 
                     class="btn" 
                     <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
