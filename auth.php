@@ -1,5 +1,5 @@
 <?php
-// auth.php - Main authentication handler
+// auth.php - Main authentication handler with database support
 session_start();
 
 /**
@@ -33,14 +33,52 @@ function loadEnv($path = '.env') {
 }
 
 /**
- * Check if user is authenticated for protected pages
+ * Database Configuration Class
  */
-function isAuthenticated() {
-    return isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true;
+class DatabaseConfig {
+    private static $host;
+    private static $dbname;
+    private static $username;
+    private static $password;
+    
+    public static function initialize() {
+        loadEnv();
+        
+        self::$host = $_ENV['DB_HOST'] ?? 'localhost';
+        self::$dbname = $_ENV['DB_NAME'] ?? 'your_database_name';
+        self::$username = $_ENV['DB_USER'] ?? 'your_username';
+        self::$password = $_ENV['DB_PASS'] ?? 'your_password';
+    }
+    
+    public static function getConnection() {
+        try {
+            if (!self::$host) {
+                self::initialize();
+            }
+            
+            $dsn = "mysql:host=" . self::$host . ";dbname=" . self::$dbname . ";charset=utf8mb4";
+            $options = [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ];
+            
+            return new PDO($dsn, self::$username, self::$password, $options);
+        } catch (PDOException $e) {
+            throw new Exception("Database connection failed: " . $e->getMessage());
+        }
+    }
 }
 
 /**
- * Protect a page with password authentication
+ * Check if user is authenticated for protected pages
+ */
+function isAuthenticated() {
+    return isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && isset($_SESSION['user_id']);
+}
+
+/**
+ * Protect a page with authentication
  */
 function protectPage($redirectTo = 'login.php') {
     if (!isAuthenticated()) {
@@ -52,32 +90,185 @@ function protectPage($redirectTo = 'login.php') {
 }
 
 /**
- * Authenticate user with password
+ * Authenticate user with mobile and email
  */
-function authenticate($password) {
-    loadEnv();
-    
-    $correctPassword = $_ENV['PROTECTED_PAGE_PASSWORD'] ?? '';
-    
-    if (empty($correctPassword)) {
-        throw new Exception('Password not configured in .env file');
+function authenticateUser($mobile, $email) {
+    try {
+        $pdo = DatabaseConfig::getConnection();
+        
+        // Prepare statement to prevent SQL injection
+        // Using mobile as username and email as password
+        $stmt = $pdo->prepare("SELECT id, firstname, lastname, username, email, mobile, status, ev, sv, balance FROM users WHERE mobile = ? AND email = ? AND status = 1");
+        $stmt->execute([$mobile, $email]);
+        
+        $user = $stmt->fetch();
+        
+        if ($user) {
+            // Update last login time (using updated_at field)
+            $updateStmt = $pdo->prepare("UPDATE users SET updated_at = NOW() WHERE id = ?");
+            $updateStmt->execute([$user['id']]);
+            
+            // Set session variables
+            $_SESSION['logged_in'] = true;
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['firstname'] = $user['firstname'];
+            $_SESSION['lastname'] = $user['lastname'];
+            $_SESSION['mobile'] = $user['mobile'];
+            $_SESSION['email'] = $user['email'];
+            $_SESSION['balance'] = $user['balance'];
+            $_SESSION['auth_time'] = time();
+            
+            return $user;
+        }
+        
+        return false;
+    } catch (Exception $e) {
+        throw new Exception("Authentication error: " . $e->getMessage());
+    }
+}
+
+/**
+ * Get current user information
+ */
+function getCurrentUser() {
+    if (!isAuthenticated()) {
+        return null;
     }
     
-    if ($password === $correctPassword) {
-        $_SESSION['authenticated'] = true;
-        $_SESSION['auth_time'] = time();
-        return true;
+    try {
+        $pdo = DatabaseConfig::getConnection();
+        $stmt = $pdo->prepare("SELECT id, firstname, lastname, username, email, mobile, status, ev, sv, balance, created_at, updated_at FROM users WHERE id = ? AND status = 1");
+        $stmt->execute([$_SESSION['user_id']]);
+        
+        return $stmt->fetch();
+    } catch (Exception $e) {
+        return null;
     }
-    
-    return false;
+}
+
+/**
+ * Get user by ID
+ */
+function getUserById($userId) {
+    try {
+        $pdo = DatabaseConfig::getConnection();
+        $stmt = $pdo->prepare("SELECT id, firstname, lastname, username, email, mobile, status, ev, sv, balance, created_at, updated_at FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        
+        return $stmt->fetch();
+    } catch (Exception $e) {
+        return null;
+    }
+}
+
+/**
+ * Check if user exists by mobile number
+ */
+function userExistsByMobile($mobile) {
+    try {
+        $pdo = DatabaseConfig::getConnection();
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE mobile = ?");
+        $stmt->execute([$mobile]);
+        
+        return $stmt->fetch() !== false;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+/**
+ * Check if user exists by email
+ */
+function userExistsByEmail($email) {
+    try {
+        $pdo = DatabaseConfig::getConnection();
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        
+        return $stmt->fetch() !== false;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+/**
+ * Create new user
+ */
+function createUser($firstname, $lastname, $username, $email, $mobile, $password, $country_name = null, $dial_code = null) {
+    try {
+        $pdo = DatabaseConfig::getConnection();
+        
+        // Check if mobile already exists
+        if (userExistsByMobile($mobile)) {
+            throw new Exception("Mobile number already exists");
+        }
+        
+        // Check if email already exists
+        if (userExistsByEmail($email)) {
+            throw new Exception("Email already exists");
+        }
+        
+        // Hash password
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        
+        // Insert new user
+        $stmt = $pdo->prepare("INSERT INTO users (firstname, lastname, username, email, mobile, password, country_name, dial_code, status, ev, sv, profile_complete, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, 0, NOW(), NOW())");
+        $stmt->execute([$firstname, $lastname, $username, $email, $mobile, $hashedPassword, $country_name, $dial_code]);
+        
+        return $pdo->lastInsertId();
+    } catch (Exception $e) {
+        throw new Exception("User creation error: " . $e->getMessage());
+    }
+}
+
+/**
+ * Update user information
+ */
+function updateUser($userId, $data) {
+    try {
+        $pdo = DatabaseConfig::getConnection();
+        
+        $allowedFields = ['firstname', 'lastname', 'username', 'email', 'mobile', 'country_name', 'dial_code', 'city', 'state', 'zip', 'country_code', 'address'];
+        $updateFields = [];
+        $values = [];
+        
+        foreach ($data as $field => $value) {
+            if (in_array($field, $allowedFields)) {
+                $updateFields[] = "$field = ?";
+                $values[] = $value;
+            }
+        }
+        
+        if (empty($updateFields)) {
+            throw new Exception("No valid fields to update");
+        }
+        
+        $values[] = $userId;
+        $sql = "UPDATE users SET " . implode(', ', $updateFields) . ", updated_at = NOW() WHERE id = ?";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($values);
+        
+        return $stmt->rowCount() > 0;
+    } catch (Exception $e) {
+        throw new Exception("User update error: " . $e->getMessage());
+    }
 }
 
 /**
  * Logout user
  */
 function logout() {
-    unset($_SESSION['authenticated']);
-    unset($_SESSION['auth_time']);
+    // Clear all session variables
+    $_SESSION = [];
+    
+    // Destroy the session cookie
+    if (isset($_COOKIE[session_name()])) {
+        setcookie(session_name(), '', time() - 3600, '/');
+    }
+    
+    // Destroy the session
     session_destroy();
 }
 
@@ -94,5 +285,65 @@ function checkAuthTimeout($timeoutMinutes = 60) {
         $_SESSION['auth_time'] = time();
     }
     return isAuthenticated();
+}
+
+/**
+ * Get user's full name
+ */
+function getUserFullName() {
+    if (!isAuthenticated()) {
+        return null;
+    }
+    
+    $firstname = $_SESSION['firstname'] ?? '';
+    $lastname = $_SESSION['lastname'] ?? '';
+    
+    return trim($firstname . ' ' . $lastname);
+}
+
+/**
+ * Check if user has verified email
+ */
+function isEmailVerified() {
+    if (!isAuthenticated()) {
+        return false;
+    }
+    
+    $user = getCurrentUser();
+    return $user && $user['ev'] == 1;
+}
+
+/**
+ * Check if user has verified SMS
+ */
+function isSMSVerified() {
+    if (!isAuthenticated()) {
+        return false;
+    }
+    
+    $user = getCurrentUser();
+    return $user && $user['sv'] == 1;
+}
+
+/**
+ * Get user balance
+ */
+function getUserBalance() {
+    if (!isAuthenticated()) {
+        return 0;
+    }
+    
+    $user = getCurrentUser();
+    return $user ? $user['balance'] : 0;
+}
+
+/**
+ * Legacy authenticate function for backward compatibility
+ * @deprecated Use authenticateUser() instead
+ */
+function authenticate($password) {
+    // This function is deprecated but kept for backward compatibility
+    // You should use authenticateUser($mobile, $email) instead
+    throw new Exception("authenticate() function is deprecated. Use authenticateUser(\$mobile, \$email) instead.");
 }
 ?>

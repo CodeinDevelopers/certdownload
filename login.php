@@ -1,14 +1,10 @@
 <?php
 // login.php - Login form and handler with lockout mechanism
+// Include the main auth functions
 require_once 'auth.php';
 
 $error = '';
 $success = '';
-
-// Initialize session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 // Initialize session variables for lockout system
 if (!isset($_SESSION['failed_attempts'])) {
@@ -64,48 +60,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($currentlyLockedOut) {
         $error = "Account locked due to multiple failed attempts. Please try again in $remainingTime.";
     } else {
-        $password = $_POST['password'] ?? '';
+        $mobile = trim($_POST['mobile'] ?? '');
+        $email = trim($_POST['email'] ?? '');
         
-        try {
-            if (authenticate($password)) {
-                // Reset failed attempts on successful login
-                $_SESSION['failed_attempts'] = 0;
-                $_SESSION['lockout_time'] = null;
+        if (empty($mobile) || empty($email)) {
+            $error = 'Please enter both mobile number and email address.';
+        } else {
+            try {
+                // Note: authenticateUser() from auth.php already sets session variables
+                $user = authenticateUser($mobile, $email);
                 
-                $success = 'Authentication successful!';
-                
-                // Redirect to originally requested page or default
-                $redirectTo = $_SESSION['redirect_after_login'] ?? 'upload-file.php';
-                unset($_SESSION['redirect_after_login']);
-                
-                header("Location: $redirectTo");
-                exit();
-            } else {
-                // Increment failed attempts
+                if ($user) {
+                    // Reset failed attempts on successful login
+                    $_SESSION['failed_attempts'] = 0;
+                    $_SESSION['lockout_time'] = null;
+                    
+                    $success = 'Authentication successful!';
+                    
+                    // Redirect to originally requested page or default
+                    $redirectTo = $_SESSION['redirect_after_login'] ?? 'upload-file.php';
+                    unset($_SESSION['redirect_after_login']);
+                    
+                    header("Location: $redirectTo");
+                    exit();
+                } else {
+                    // Increment failed attempts
+                    $_SESSION['failed_attempts']++;
+                    
+                    // Set lockout time if this is the 3rd failed attempt
+                    if ($_SESSION['failed_attempts'] >= 3) {
+                        $_SESSION['lockout_time'] = time();
+                        $error = 'Account locked due to 3 failed login attempts. Please try again in 10 minutes.';
+                        $currentlyLockedOut = true;
+                        $remainingTime = "10:00";
+                    } else {
+                        $remainingAttempts = 3 - $_SESSION['failed_attempts'];
+                        $error = "Invalid mobile number or email address. $remainingAttempts attempt(s) remaining before lockout.";
+                    }
+                }
+            } catch (Exception $e) {
+                // Increment failed attempts for exceptions too
                 $_SESSION['failed_attempts']++;
                 
-                // Set lockout time if this is the 3rd failed attempt
                 if ($_SESSION['failed_attempts'] >= 3) {
                     $_SESSION['lockout_time'] = time();
-                    $error = 'Account locked due to 3 failed login attempts. Please try again in 10 minutes.';
+                    $error = 'Account locked due to multiple failed attempts. Please try again in 10 minutes.';
                     $currentlyLockedOut = true;
                     $remainingTime = "10:00";
                 } else {
-                    $remainingAttempts = 3 - $_SESSION['failed_attempts'];
-                    $error = "Invalid password. $remainingAttempts attempt(s) remaining before lockout.";
+                    $error = 'Authentication error: ' . $e->getMessage();
                 }
-            }
-        } catch (Exception $e) {
-            // Increment failed attempts for exceptions too
-            $_SESSION['failed_attempts']++;
-            
-            if ($_SESSION['failed_attempts'] >= 3) {
-                $_SESSION['lockout_time'] = time();
-                $error = 'Account locked due to multiple failed attempts. Please try again in 10 minutes.';
-                $currentlyLockedOut = true;
-                $remainingTime = "10:00";
-            } else {
-                $error = 'Authentication error: ' . $e->getMessage();
             }
         }
     }
@@ -164,7 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: bold;
         }
         
-        input[type="password"] {
+        input[type="text"], input[type="email"] {
             width: 100%;
             padding: 0.75rem;
             border: 2px solid #ddd;
@@ -174,12 +178,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             box-sizing: border-box;
         }
         
-        input[type="password"]:focus {
+        input[type="text"]:focus, input[type="email"]:focus {
             outline: none;
             border-color: #667eea;
         }
         
-        input[type="password"]:disabled {
+        input[type="text"]:disabled, input[type="email"]:disabled {
             background-color: #f5f5f5;
             color: #666;
             cursor: not-allowed;
@@ -284,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-container">
         <div class="login-header">
             <h2>🔒 Protected Area</h2>
-            <p>Please enter the password to continue</p>
+            <p>Please enter your mobile number and email to continue</p>
         </div>
         
         <?php if ($currentlyLockedOut): ?>
@@ -311,19 +315,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <form method="POST" action="">
             <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" 
-                       id="password" 
-                       name="password" 
+                <label for="mobile">Mobile Number:</label>
+                <input type="text" 
+                       id="mobile" 
+                       name="mobile" 
                        required 
                        autofocus
+                       placeholder="Enter your mobile number"
+                       value="<?php echo htmlspecialchars($_POST['mobile'] ?? ''); ?>"
+                       <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email Address:</label>
+                <input type="email" 
+                       id="email" 
+                       name="email" 
+                       required 
+                       placeholder="Enter your email address"
+                       value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
                        <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
             </div>
             
             <button type="submit" 
                     class="btn" 
                     <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
-                <?php echo $currentlyLockedOut ? 'Account Locked' : 'Access Protected Area'; ?>
+                <?php echo $currentlyLockedOut ? 'Account Locked' : 'Login'; ?>
             </button>
         </form>
     </div>
