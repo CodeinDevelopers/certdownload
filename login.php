@@ -92,134 +92,248 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Protected Area - Login Required</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-        }
-        
-        .login-container {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            width: 100%;
-            max-width: 400px;
-        }
-        
-        .login-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        
-        .login-header h2 {
-            color: #333;
-            margin-bottom: 0.5rem;
-        }
-        
-        .login-header p {
-            color: #666;
-            margin: 0;
-        }
-        
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #333;
-            font-weight: bold;
-        }
-        
-        input[type="text"], input[type="email"] {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-            box-sizing: border-box;
-        }
-        
-        input[type="text"]:focus, input[type="email"]:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        input[type="text"]:disabled, input[type="email"]:disabled {
-            background-color: #f5f5f5;
-            color: #666;
-            cursor: not-allowed;
-        }
-        
-        .btn {
-            width: 100%;
-            padding: 0.75rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        
-        .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-        }
-        
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 0.75rem;
-            border-radius: 5px;
-            margin-bottom: 1rem;
-            border-left: 4px solid #c33;
-        }
-        
-        .success {
-            background: #efe;
-            color: #3c3;
-            padding: 0.75rem;
-            border-radius: 5px;
-            margin-bottom: 1rem;
-            border-left: 4px solid #3c3;
-        }
-        
-        .lockout-info {
-            background: #fff3cd;
-            color: #856404;
-            padding: 0.75rem;
-            border-radius: 5px;
-            margin-bottom: 1rem;
-            border-left: 4px solid #ffc107;
-            text-align: center;
-        }
-        
-        .lockout-timer {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #dc3545;
-        }
-        
-        .attempts-info {
-            font-size: 0.9rem;
-            color: #666;
-            text-align: center;
-            margin-bottom: 1rem;
-        }
+       * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #212529;
+    padding: 20px;
+}
+
+.login-container {
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.logo-section {
+    text-align: center;
+}
+
+.logo-section img {
+    height: 70px;
+    border-radius: 12px;
+    transition: transform 0.3s ease;
+    padding: 12px;
+}
+
+.logo-section img:hover {
+    transform: scale(1.05);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.login-header h2 {
+    font-size: 32px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #212529 0%, #6c757d 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.login-header p {
+    color: #6c757d;
+    font-size: 16px;
+    margin: 0;
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #212529;
+}
+
+input[type="text"], 
+input[type="email"] {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    color: #212529;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+input[type="text"]:focus, 
+input[type="email"]:focus {
+    outline: none;
+    border-color: #0070f3;
+    box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder {
+    color: #6c757d;
+}
+
+input[type="text"]:disabled, 
+input[type="email"]:disabled {
+    background-color: #f5f5f5;
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.btn {
+    width: 100%;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 500;
+    background: linear-gradient(135deg, #34c759 0%, #28a745 100%);
+    border: none;
+    border-radius: 8px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    font-family: inherit;
+}
+
+.btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 25px rgba(52, 199, 89, 0.3);
+}
+
+.btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.error {
+    background: rgba(255, 59, 48, 0.1);
+    border: 1px solid rgba(255, 59, 48, 0.3);
+    color: #ff3b30;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    border-left: 4px solid #ff3b30;
+}
+
+.success {
+    background: rgba(52, 199, 89, 0.1);
+    border: 1px solid rgba(52, 199, 89, 0.3);
+    color: #34c759;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    border-left: 4px solid #34c759;
+}
+
+.lockout-info {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    color: #856404;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    border-left: 4px solid #ffc107;
+    text-align: center;
+    font-size: 14px;
+}
+
+.lockout-timer {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ff3b30;
+    margin-top: 8px;
+}
+
+.attempts-info {
+    font-size: 14px;
+    color: #6c757d;
+    text-align: center;
+    margin-bottom: 16px;
+    background: rgba(108, 117, 125, 0.1);
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+/* Loading animation */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid transparent;
+    border-top: 2px solid #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    body {
+        padding: 16px;
+    }
+    
+    .login-container {
+        padding: 24px;
+    }
+    
+    .logo-section img {
+        max-width: 120px;
+        padding: 8px;
+    }
+    
+    .login-header h2 {
+        font-size: 24px;
+    }
+    
+    .login-header p {
+        font-size: 14px;
+    }
+    
+    input[type="text"], 
+    input[type="email"] {
+        font-size: 14px;
+        padding: 10px 14px;
+    }
+    
+    .btn {
+        font-size: 14px;
+        padding: 10px 20px;
+    }
+}
     </style>
     <?php if ($currentlyLockedOut): ?>
     <script>
@@ -248,9 +362,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 </head>
 <body>
+    <div class="logo-section">
+        <img src="images/logo.png" alt="Company Logo" id="logo">
+    </div>
+    
     <div class="login-container">
         <div class="login-header">
-            <h2>🔒 Protected Area</h2>
             <p>Please enter your mobile number and email to continue</p>
         </div>
         <?php if ($currentlyLockedOut): ?>
