@@ -74,7 +74,6 @@ function authenticateAdmin($email, $username, $password) {
         $stmt = $pdo->prepare("SELECT id, name, email, username, access, image, created_at, updated_at FROM admins WHERE email = ? AND username = ?");
         $stmt->execute([$email, $username]);
         $admin = $stmt->fetch();
-        
         if ($admin) {
             $updateStmt = $pdo->prepare("UPDATE admins SET updated_at = NOW() WHERE id = ?");
             $updateStmt->execute([$admin['id']]);
