@@ -1,46 +1,27 @@
-# .htaccess file for certificates directory security
-
 RewriteEngine On
-
-# Increase upload limits
 php_value upload_max_filesize 5M
 php_value post_max_size 5M
 php_value max_execution_time 300
 php_value max_input_time 300
-
-# Security: Prevent direct access to certificate files
 <Files "*.pdf">
     Order Deny,Allow
     Deny from all
 </Files>
-
-# Allow PHP files to run
 <Files "*.php">
     Order Allow,Deny
     Allow from all
 </Files>
-
-# Protect .env file
 <Files ".env">
     Order allow,deny
     Deny from all
 </Files>
-
-# Prevent directory listing
 Options -Indexes
-
-# Custom error pages (optional)
 ErrorDocument 403 "Access Denied"
 ErrorDocument 404 "File Not Found"
-
-# Simple URL rewriting for PHP files
-# If file doesn't exist, check for .php version
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.php -f
 RewriteRule ^(.*)$ $1.php [L]
-
-# If file doesn't exist, check for .html version
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.html -f

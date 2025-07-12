@@ -13,7 +13,7 @@ $currentUser = getCurrentUser();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Certificate Upload Portal</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <header class="site-header">
@@ -120,7 +120,7 @@ $currentUser = getCurrentUser();
         </div>
     </div>
 
-    <script src="certificates.js"></script>
+    <script src="js/certificates.js"></script>
     <script>
         const uploadForm = document.getElementById('uploadForm');
         const fileInput = document.getElementById('certificateFile');

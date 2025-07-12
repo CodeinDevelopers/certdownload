@@ -51,7 +51,6 @@ class AdminDatabaseConfig {
         }
     }
 }
-
 function isAdminAuthenticated() {
     return isset($_SESSION['admin_logged_in']) && 
            $_SESSION['admin_logged_in'] === true && 
@@ -185,7 +184,6 @@ function updateAdmin($adminId, $data) {
     }
 }
 function adminLogout() {
-    // Clear only admin session variables
     $keysToUnset = ['admin_logged_in', 'admin_id', 'admin_name', 'admin_email', 'admin_username', 'admin_access', 'admin_image', 'admin_auth_time'];
     
     foreach ($keysToUnset as $key) {

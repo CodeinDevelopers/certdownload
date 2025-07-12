@@ -1,481 +1,380 @@
 <?php
 require_once 'admin_auth.php';
-
-$error = '';
-$success = '';
-
-// Initialize failed attempts tracking
-if (!isset($_SESSION['admin_failed_attempts'])) {
-    $_SESSION['admin_failed_attempts'] = 0;
+protectAdminPage('admin_login.php');
+if (!checkAdminAuthTimeout()) {
+    header("Location: admin_login.php");
+    exit();
 }
-if (!isset($_SESSION['admin_lockout_time'])) {
-    $_SESSION['admin_lockout_time'] = null;
-}
-
-function isAdminLockedOut() {
-    if ($_SESSION['admin_failed_attempts'] >= 3 && $_SESSION['admin_lockout_time'] !== null) {
-        $lockoutDuration = 15 * 60; // 15 minutes lockout for admin
-        $currentTime = time();
-        if (($currentTime - $_SESSION['admin_lockout_time']) >= $lockoutDuration) {
-            $_SESSION['admin_failed_attempts'] = 0;
-            $_SESSION['admin_lockout_time'] = null;
-            return false;
-        }
-        return true;
-    }
-    return false;
-}
-
-function getAdminRemainingLockoutTime() {
-    if ($_SESSION['admin_lockout_time'] !== null) {
-        $lockoutDuration = 15 * 60; // 15 minutes
-        $elapsed = time() - $_SESSION['admin_lockout_time'];
-        $remaining = $lockoutDuration - $elapsed;
-        if ($remaining > 0) {
-            $minutes = floor($remaining / 60);
-            $seconds = $remaining % 60;
-            return sprintf("%d:%02d", $minutes, $seconds);
-        }
-    }
-    return "0:00";
-}
-
-$currentlyLockedOut = isAdminLockedOut();
-$remainingTime = $currentlyLockedOut ? getAdminRemainingLockoutTime() : null;
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($currentlyLockedOut) {
-        $error = "Admin account locked due to multiple failed attempts. Please try again in $remainingTime.";
-    } else {
-        $email = trim($_POST['email'] ?? '');
-        $username = trim($_POST['username'] ?? '');
-        $password = trim($_POST['password'] ?? '');
-        
-        if (empty($email) || empty($username) || empty($password)) {
-            $error = 'Please enter email, username, and password.';
-        } else {
-            try {
-                $admin = authenticateAdmin($email, $username, $password);
-                
-                if ($admin) {
-                    $_SESSION['admin_failed_attempts'] = 0;
-                    $_SESSION['admin_lockout_time'] = null;
-                    $success = 'Admin authentication successful!';
-                    
-                    $redirectTo = $_SESSION['admin_redirect_after_login'] ?? 'admin_dashboard.php';
-                    unset($_SESSION['admin_redirect_after_login']);
-                    
-                    header("Location: $redirectTo");
-                    exit();
-                } else {
-                    $_SESSION['admin_failed_attempts']++;
-                    if ($_SESSION['admin_failed_attempts'] >= 3) {
-                        $_SESSION['admin_lockout_time'] = time();
-                        $error = 'Admin account locked due to 3 failed login attempts. Please try again in 15 minutes.';
-                        $currentlyLockedOut = true;
-                        $remainingTime = "15:00";
-                    } else {
-                        $remainingAttempts = 3 - $_SESSION['admin_failed_attempts'];
-                        $error = "Invalid credentials. $remainingAttempts attempt(s) remaining before lockout.";
-                    }
-                }
-            } catch (Exception $e) {
-                $_SESSION['admin_failed_attempts']++;
-                if ($_SESSION['admin_failed_attempts'] >= 3) {
-                    $_SESSION['admin_lockout_time'] = time();
-                    $error = 'Admin account locked due to multiple failed attempts. Please try again in 15 minutes.';
-                    $currentlyLockedOut = true;
-                    $remainingTime = "15:00";
-                } else {
-                    $error = 'Authentication error: ' . $e->getMessage();
-                }
-            }
-        }
-    }
-}
+logAdminActivity('Accessed Admin Dashboard');
+$currentAdmin = getCurrentAdmin();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - Secure Access</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #212529;
-            padding: 20px;
-        }
-
-        .admin-badge {
-            background: linear-gradient(135deg, #212529 0%, #6c757d 100%);
-            color: white;
-            padding: 8px 20px;
-            border-radius: 25px;
-            font-size: 14px;
-            font-weight: 600;
-            display: inline-block;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(33, 37, 41, 0.3);
-            letter-spacing: 0.5px;
-        }
-
-        .login-container {
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 12px;
-            padding: 40px;
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .logo-section {
-            text-align: center;
-        }
-
-        .logo-section img {
-            height: 70px;
-            border-radius: 12px;
-            transition: transform 0.3s ease;
-            padding: 12px;
-        }
-
-        .logo-section img:hover {
-            transform: scale(1.05);
-        }
-
-        .login-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .login-header h2 {
-            font-size: 32px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            background: linear-gradient(135deg, #212529 0%, #6c757d 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .login-header p {
-            color: #6c757d;
-            font-size: 16px;
-            margin: 0;
-        }
-
-        .form-group {
-            margin-bottom: 24px;
-        }
-
-        label {
-            display: block;
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 8px;
-            color: #212529;
-        }
-
-        input[type="text"], 
-        input[type="email"],
-        input[type="password"] {
-            width: 100%;
-            padding: 12px 16px;
-            font-size: 16px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            color: #212529;
-            transition: all 0.2s ease;
-            font-family: inherit;
-        }
-
-        input[type="text"]:focus, 
-        input[type="email"]:focus,
-        input[type="password"]:focus {
-            outline: none;
-            border-color: #0070f3;
-            box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
-        }
-
-        input[type="text"]::placeholder,
-        input[type="email"]::placeholder,
-        input[type="password"]::placeholder {
-            color: #6c757d;
-        }
-
-        input[type="text"]:disabled, 
-        input[type="email"]:disabled,
-        input[type="password"]:disabled {
-            background-color: #f5f5f5;
-            color: #6c757d;
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: 500;
-            background: linear-gradient(135deg, #34c759 0%, #28a745 100%);
-            border: none;
-            border-radius: 8px;
-            color: #ffffff;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-            font-family: inherit;
-        }
-
-        .btn:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 25px rgba(52, 199, 89, 0.3);
-        }
-
-        .btn:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .error {
-            background: rgba(255, 59, 48, 0.1);
-            border: 1px solid rgba(255, 59, 48, 0.3);
-            color: #ff3b30;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 14px;
-            border-left: 4px solid #ff3b30;
-        }
-
-        .success {
-            background: rgba(52, 199, 89, 0.1);
-            border: 1px solid rgba(52, 199, 89, 0.3);
-            color: #34c759;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 14px;
-            border-left: 4px solid #34c759;
-        }
-
-        .lockout-info {
-            background: rgba(255, 193, 7, 0.1);
-            border: 1px solid rgba(255, 193, 7, 0.3);
-            color: #856404;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            border-left: 4px solid #ffc107;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        .lockout-timer {
-            font-size: 18px;
-            font-weight: 600;
-            color: #ff3b30;
-            margin-top: 8px;
-        }
-
-        .attempts-info {
-            font-size: 14px;
-            color: #6c757d;
-            text-align: center;
-            margin-bottom: 16px;
-            background: rgba(108, 117, 125, 0.1);
-            padding: 8px 12px;
-            border-radius: 6px;
-        }
-
-        .security-note {
-            font-size: 12px;
-            color: #6c757d;
-            text-align: center;
-            margin-top: 20px;
-            padding: 12px;
-            background: rgba(108, 117, 125, 0.1);
-            border-radius: 8px;
-            border: 1px solid rgba(108, 117, 125, 0.2);
-        }
-
-        /* Loading animation */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid transparent;
-            border-top: 2px solid #ffffff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 8px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Responsive Design */
-        @media (max-width: 480px) {
-            .login-container {
-                padding: 24px;
-            }
-            
-            .logo-section img {
-                max-width: 120px;
-                padding: 8px;
-            }
-            
-            .login-header h2 {
-                font-size: 24px;
-            }
-            
-            .login-header p {
-                font-size: 14px;
-            }
-            
-            input[type="text"], 
-            input[type="email"],
-            input[type="password"] {
-                font-size: 14px;
-                padding: 10px 14px;
-            }
-            
-            .btn {
-                font-size: 14px;
-                padding: 10px 20px;
-            }
-        }
-    </style>
-    <?php if ($currentlyLockedOut): ?>
-    <script>
-        let remainingSeconds = <?php 
-            $lockoutDuration = 15 * 60; // 15 minutes
-            $elapsed = time() - $_SESSION['admin_lockout_time'];
-            $remaining = $lockoutDuration - $elapsed;
-            echo max(0, $remaining);
-        ?>;
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <div>
+                    <h1>Admin Dashboard</h1>
+                    <p>Manage users and certificates</p>
+                </div>
+                <div class="admin-info">
+                    <span>Welcome, <?php echo htmlspecialchars(getAdminDisplayName()); ?></span>
+                    <a href="admin_logout.php" class="logout-btn">Logout</a>
+                </div>
+            </div>
+        </div>
         
-        function updateTimer() {
-            if (remainingSeconds <= 0) {
-                location.reload();
+        <div class="stats-grid" id="stats-grid">
+        </div>
+        
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search users by name, email, or mobile..." onkeyup="searchUsers()">
+        </div>
+        
+        <div class="users-table">
+            <table id="usersTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Mobile</th>
+                        <th>Status</th>
+                        <th>Email Verified</th>
+                        <th>SMS Verified</th>
+                        <th>Balance</th>
+                        <th>Joined</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                </tbody>
+            </table>
+            
+            <div class="pagination" id="pagination">
+            </div>
+        </div>
+    </div>
+    
+    <div id="filesModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">User Files</h2>
+            <div id="filesContainer">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let searchTerm = '';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadUsers();
+            setupModal();
+        });
+        
+        function loadStats() {
+            fetch('admin_api.php?action=get_stats')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const statsGrid = document.getElementById('stats-grid');
+                        statsGrid.innerHTML = `
+                            <div class="stat-card">
+                                <h3>Total Users</h3>
+                                <div class="number">${data.stats.total_users}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Active Users</h3>
+                                <div class="number">${data.stats.active_users}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Total Certificates</h3>
+                                <div class="number">${data.stats.total_certificates}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Users with Certificates</h3>
+                                <div class="number">${data.stats.users_with_certificates}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Email Verified</h3>
+                                <div class="number">${data.stats.email_verified}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>SMS Verified</h3>
+                                <div class="number">${data.stats.sms_verified}</div>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => console.error('Error loading stats:', error));
+        }
+        
+        function loadUsers(page = 1) {
+            currentPage = page;
+            const url = `admin_api.php?action=get_users&page=${page}&search=${encodeURIComponent(searchTerm)}`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayUsers(data.users);
+                        displayPagination(data.pagination);
+                    }
+                })
+                .catch(error => console.error('Error loading users:', error));
+        }
+        
+        function displayUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.firstname} ${user.lastname}</td>
+                    <td>${user.email}</td>
+                    <td>${user.mobile}</td>
+                    <td>
+                        <span class="status-badge ${user.status == 1 ? 'status-active' : 'status-inactive'}">
+                            ${user.status == 1 ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td class="${user.ev == 1 ? 'verified' : 'not-verified'}">
+                        ${user.ev == 1 ? '✓' : '✗'}
+                    </td>
+                    <td class="${user.sv == 1 ? 'verified' : 'not-verified'}">
+                        ${user.sv == 1 ? '✓' : '✗'}
+                    </td>
+                    <td>$${user.balance}</td>
+                    <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="view-files-btn" onclick="viewUserFiles(${user.id}, '${user.firstname} ${user.lastname}')">
+                            View Files
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function displayPagination(pagination) {
+            const paginationDiv = document.getElementById('pagination');
+            paginationDiv.innerHTML = '';
+            
+            if (pagination.totalPages <= 1) return;
+            
+            if (pagination.page > 1) {
+                paginationDiv.innerHTML += `<a href="#" onclick="loadUsers(${pagination.page - 1})">&laquo; Previous</a>`;
+            }
+            
+            for (let i = 1; i <= pagination.totalPages; i++) {
+                if (i === pagination.page) {
+                    paginationDiv.innerHTML += `<span class="current">${i}</span>`;
+                } else {
+                    paginationDiv.innerHTML += `<a href="#" onclick="loadUsers(${i})">${i}</a>`;
+                }
+            }
+            
+            if (pagination.page < pagination.totalPages) {
+                paginationDiv.innerHTML += `<a href="#" onclick="loadUsers(${pagination.page + 1})">Next &raquo;</a>`;
+            }
+        }
+        
+        function searchUsers() {
+            const searchInput = document.getElementById('searchInput');
+            searchTerm = searchInput.value.trim();
+            loadUsers(1);
+        }
+        
+        function viewUserFiles(userId, userName) {
+            const modal = document.getElementById('filesModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const filesContainer = document.getElementById('filesContainer');
+            
+            modalTitle.textContent = `Files for ${userName}`;
+            filesContainer.innerHTML = '<p>Loading files...</p>';
+            
+            modal.style.display = 'block';
+            
+            fetch(`admin_api.php?action=get_user_files&user_id=${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayFiles(data.files);
+                    } else {
+                        filesContainer.innerHTML = '<p class="no-files">Error loading files</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading files:', error);
+                    filesContainer.innerHTML = '<p class="no-files">Error loading files</p>';
+                });
+        }
+        
+        function displayFiles(files) {
+            const filesContainer = document.getElementById('filesContainer');
+            
+            if (files.length === 0) {
+                filesContainer.innerHTML = '<p class="no-files">No files uploaded by this user</p>';
                 return;
             }
             
-            const minutes = Math.floor(remainingSeconds / 60);
-            const seconds = remainingSeconds % 60;
-            const timerElement = document.getElementById('lockout-timer');
+            filesContainer.innerHTML = '';
             
-            if (timerElement) {
-                timerElement.textContent = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-            }
-            
-            remainingSeconds--;
+            files.forEach(file => {
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'file-item';
+                fileDiv.innerHTML = `
+                    <div class="file-header">
+                        <h3>${getFileIcon(file.mime_type)} ${file.original_filename}</h3>
+                    </div>
+                    <div class="file-info">
+                        <div><strong>IMEI:</strong> ${file.imei}</div>
+                        <div><strong>Size:</strong> ${formatFileSize(file.file_size)}</div>
+                        <div><strong>Type:</strong> ${file.mime_type}</div>
+                        <div><strong>Downloads:</strong> ${file.download_count}/${file.max_downloads}</div>
+                        <div><strong>Uploaded:</strong> ${new Date(file.created_at).toLocaleString()}</div>
+                        <div><strong>Last Modified:</strong> ${new Date(file.updated_at).toLocaleString()}</div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="download-btn" onclick="downloadFile('${file.filename}')">Download</button>
+                        ${file.mime_type.startsWith('image/') ? `<button class="view-files-btn" onclick="viewFile('${file.filename}', '${file.mime_type}')">View</button>` : ''}
+                        <button class="delete-btn" onclick="deleteFile(${file.id})">Delete</button>
+                    </div>
+                `;
+                filesContainer.appendChild(fileDiv);
+            });
         }
         
-        setInterval(updateTimer, 1000);
+        function getFileIcon(mimeType) {
+            switch (mimeType) {
+                case 'application/pdf':
+                    return '📄';
+                case 'image/jpeg':
+                case 'image/jpg':
+                case 'image/png':
+                    return '🖼️';
+                default:
+                    return '📎';
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            const units = ['B', 'KB', 'MB', 'GB'];
+            let size = bytes;
+            let unitIndex = 0;
+            
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex++;
+            }
+            
+            return Math.round(size * 100) / 100 + ' ' + units[unitIndex];
+        }
+        
+        function downloadFile(filename) {
+            window.open(`admin_api.php?action=download_file&filename=${filename}`, '_blank');
+        }
+        
+        function viewFile(filename, mimeType) {
+            if (mimeType.startsWith('image/')) {
+                showImageModal(filename);
+            } else {
+                downloadFile(filename);
+            }
+        }
+        
+        function showImageModal(filename) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content" style="text-align: center;">
+                    <span class="close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                    <img src="certificates/${filename}" style="max-width: 100%; max-height: 70vh; margin: 20px 0;">
+                    <div>
+                        <button class="download-btn" onclick="downloadFile('${filename}')">Download Image</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+            
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.remove();
+                }
+            }
+        }
+        
+        function deleteFile(fileId) {
+            if (confirm('Are you sure you want to delete this file? This action cannot be undone.')) {
+                fetch('admin_api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `action=delete_file&file_id=${fileId}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('File deleted successfully');
+                        const modal = document.getElementById('filesModal');
+                        const modalTitle = document.getElementById('modalTitle');
+                        const titleText = modalTitle.textContent;
+                        const userName = titleText.replace('Files for ', '');
+                        const rows = document.querySelectorAll('#usersTableBody tr');
+                        let userId = null;
+                        
+                        rows.forEach(row => {
+                            const nameCell = row.cells[1].textContent;
+                            if (nameCell === userName) {
+                                userId = row.cells[0].textContent;
+                            }
+                        });
+                        
+                        if (userId) {
+                            viewUserFiles(userId, userName);
+                        } else {
+                            modal.style.display = 'none';
+                        }
+                        loadStats();
+                    } else {
+                        alert('Error deleting file: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting file:', error);
+                    alert('Error deleting file');
+                });
+            }
+        }
+        
+        function setupModal() {
+            const modal = document.getElementById('filesModal');
+            const span = document.getElementsByClassName('close')[0];
+            
+            span.onclick = function() {
+                modal.style.display = 'none';
+            }
+            
+            window.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            }
+        }
     </script>
-    <?php endif; ?>
-</head>
-<body>
-    <div class="logo-section">
-        <img src="images/logo.png" alt="Company Logo" id="logo">
-    </div>
-    
-    <div class="login-container">
-        <div class="login-header">
-            <div class="admin-badge">ADMIN ACCESS</div>
-            <p>Please enter your admin credentials to continue</p>
-        </div>
-        
-        <?php if ($currentlyLockedOut): ?>
-            <div class="lockout-info">
-                <strong>Account Locked</strong><br>
-                Too many failed attempts. Please wait:<br>
-                <span class="lockout-timer" id="lockout-timer"><?php echo $remainingTime; ?></span>
-            </div>
-        <?php endif; ?>
-        
-        <?php if ($error): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
-        
-        <?php if ($success): ?>
-            <div class="success"><?php echo htmlspecialchars($success); ?></div>
-        <?php endif; ?>
-        
-        <?php if (!$currentlyLockedOut && $_SESSION['admin_failed_attempts'] > 0): ?>
-            <div class="attempts-info">
-                Failed attempts: <?php echo $_SESSION['admin_failed_attempts']; ?>/3
-            </div>
-        <?php endif; ?>
-        
-        <form method="POST" action="">
-            <div class="form-group">
-                <label for="email">Email Address:</label>
-                <input type="email" 
-                       id="email" 
-                       name="email" 
-                       required 
-                       autofocus
-                       placeholder="Enter your admin email"
-                       value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
-                       <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
-            </div>
-            
-            <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" 
-                       id="username" 
-                       name="username" 
-                       required 
-                       placeholder="Enter your admin username"
-                       value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>"
-                       <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" 
-                       id="password" 
-                       name="password" 
-                       required 
-                       placeholder="Enter your admin password"
-                       <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
-            </div>
-            
-            <button type="submit" 
-                    class="btn" 
-                    <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
-                <?php echo $currentlyLockedOut ? 'Account Locked' : 'Admin Login'; ?>
-            </button>
-        </form>
-    </div>
-    
-    <div class="security-note">
-        This is a secure admin area. All access attempts are logged and monitored.
-    </div>
 </body>
 </html>

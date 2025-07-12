@@ -57,24 +57,18 @@ try {
     }
     $file = $_FILES['file'];
     $maxSize = 5 * 1024 * 1024;
-    
-    // Updated to support multiple file types
     $allowedTypes = [
         'application/pdf',
         'image/jpeg',
         'image/jpg',
         'image/png'
     ];
-    
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mimeType = finfo_file($finfo, $file['tmp_name']);
     finfo_close($finfo);
-    
-    // Handle edge cases where MIME type detection might vary
     if ($mimeType === 'image/jpg') {
         $mimeType = 'image/jpeg';
     }
-    
     if (!in_array($mimeType, $allowedTypes)) {
         throw new Exception('Only PDF, JPG, JPEG, and PNG files are allowed. Detected file type: ' . $mimeType);
     }
@@ -100,11 +94,8 @@ try {
             throw new Exception('Failed to create upload directory');
         }
     }
-    
-    // Generate filename with proper extension based on MIME type
     $timestamp = time();
     $randomNum = rand(100, 999);
-    
     $extension = '';
     switch ($mimeType) {
         case 'application/pdf':
@@ -117,9 +108,8 @@ try {
             $extension = '.png';
             break;
         default:
-            $extension = '.pdf'; // fallback
+            $extension = '.pdf';
     }
-    
     $filename = "cert_{$currentUser['id']}_{$timestamp}_{$randomNum}{$extension}";
     $filepath = $uploadDir . $filename;
     if (!move_uploaded_file($file['tmp_name'], $filepath)) {
