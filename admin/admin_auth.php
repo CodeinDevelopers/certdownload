@@ -1,6 +1,6 @@
 <?php
 session_start();
-function loadEnv($path = '.env') {
+function loadEnv($path = './../.env') {
     if (!file_exists($path)) {
         throw new Exception('.env file not found');
     }

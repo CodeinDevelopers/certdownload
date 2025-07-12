@@ -369,7 +369,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php if ($currentlyLockedOut): ?>
     <script>
         let remainingSeconds = <?php 
-            $lockoutDuration = 15 * 60; // 15 minutes
+            $lockoutDuration = 15 * 60;
             $elapsed = time() - $_SESSION['admin_lockout_time'];
             $remaining = $lockoutDuration - $elapsed;
             echo max(0, $remaining);
@@ -398,7 +398,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
     <div class="logo-section">
-        <img src="images/logo.png" alt="Company Logo" id="logo">
+        <img src="./../images/logo.png" alt="Company Logo" id="logo">
     </div>
     
     <div class="login-container">

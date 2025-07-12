@@ -131,7 +131,7 @@ try {
     ]);
     $certificateId = $pdo->lastInsertId();
     $logEntry = date('Y-m-d H:i:s') . " - Uploaded: {$filename} for User ID: {$currentUser['id']} ({$currentUser['firstname']} {$currentUser['lastname']}) - Mobile: {$currentUser['mobile']} - IMEI: {$imei} - Type: {$mimeType}\n";
-    file_put_contents('./upload_log.txt', $logEntry, FILE_APPEND | LOCK_EX);
+    file_put_contents('./logs/upload_log.txt', $logEntry, FILE_APPEND | LOCK_EX);
     echo json_encode([
         'success' => true,
         'certificate_id' => $certificateId,
