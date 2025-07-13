@@ -603,3 +603,8 @@
                 font-size: 12px;
             }
         }
+        .currency-symbol {
+    font-family: Arial, sans-serif;
+    vertical-align: baseline;
+    display: inline-block;
+}

@@ -76,7 +76,7 @@ $currentAdmin = getCurrentAdmin();
     </div>
 
     <script>
-       let currentPage = 1;
+let currentPage = 1;
 let searchTerm = '';
 let searchBarOriginalPosition = 0;
 let isSearchBarSticky = false;
@@ -86,8 +86,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadUsers();
     setupModal();
     setupStickySearchBar();
-    
-    // Store the original position of the search bar
     const searchBar = document.getElementById('searchBar');
     if (searchBar) {
         searchBarOriginalPosition = searchBar.offsetTop;
@@ -97,26 +95,20 @@ document.addEventListener('DOMContentLoaded', function() {
 function setupStickySearchBar() {
     const searchBar = document.getElementById('searchBar');
     const searchBarPlaceholder = document.getElementById('searchBarPlaceholder');
-    
-    if (!searchBar) return; // Exit if search bar doesn't exist
-    
-    // Store the original position after page load
+    if (!searchBar) return;
     setTimeout(() => {
         searchBarOriginalPosition = searchBar.offsetTop;
     }, 100);
     
     window.addEventListener('scroll', function() {
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        
         if (scrollTop > searchBarOriginalPosition && !isSearchBarSticky) {
-            // Make search bar sticky
             searchBar.classList.add('sticky');
             if (searchBarPlaceholder) {
                 searchBarPlaceholder.classList.add('active');
             }
             isSearchBarSticky = true;
         } else if (scrollTop <= searchBarOriginalPosition && isSearchBarSticky) {
-            // Remove sticky behavior
             searchBar.classList.remove('sticky');
             if (searchBarPlaceholder) {
                 searchBarPlaceholder.classList.remove('active');
@@ -177,7 +169,13 @@ function loadUsers(page = 1) {
         })
         .catch(error => console.error('Error loading users:', error));
 }
-
+function formatNairaCurrency(amount) {
+    const num = parseFloat(amount) || 0;
+    return '₦' + num.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
 function displayUsers(users) {
     const tbody = document.getElementById('usersTableBody');
     tbody.innerHTML = '';
@@ -200,7 +198,7 @@ function displayUsers(users) {
             <td class="${user.sv == 1 ? 'verified' : 'not-verified'}">
                 ${user.sv == 1 ? '✓' : '✗'}
             </td>
-            <td>$${user.balance}</td>
+            <td>₦${parseFloat(user.balance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
             <td>${new Date(user.created_at).toLocaleDateString()}</td>
             <td>
                 <button class="view-files-btn" onclick="viewUserFiles(${user.id}, '${user.firstname} ${user.lastname}')">
