@@ -1,4 +1,3 @@
-@ -1,322 +0,0 @@
 <?php
 session_start();
 function loadEnv($path = '.env') {
