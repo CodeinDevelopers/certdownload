@@ -16,12 +16,14 @@ try {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Safer Naija Upload Portal</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <header class="site-header">
         <div class="logo-container">
@@ -102,7 +104,7 @@ try {
                         <span id="identifierType">This field will be automatically filled when you select a post</span>
                     </div>
                 </div>
-                
+
                 <div class="form-group full-width">
                     <label for="certificateFile">Purchase Receipt File</label>
                     <input
@@ -142,8 +144,8 @@ try {
         </div>
     </div>
     <script src="js/certificates.js"></script>
-<script>
-const uploadForm = document.getElementById('uploadForm');
+    <script>
+      const uploadForm = document.getElementById('uploadForm');
 const fileInput = document.getElementById('certificateFile');
 const postSelect = document.getElementById('postSelect');
 const deviceIdentifierInput = document.getElementById('deviceIdentifier');
@@ -163,6 +165,114 @@ const confirmBtnText = document.getElementById('confirmBtnText');
 let allCertificates = [];
 let certificateToDelete = null;
 const userPosts = <?php echo json_encode($userPosts); ?>;
+
+// Improved Toast Functions
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatMessage(message) {
+    // Remove HTML tags and format the message nicely
+    let formatted = message.replace(/<br\s*\/?>/gi, '\n');
+    formatted = formatted.replace(/<[^>]*>/g, ''); // Remove any HTML tags
+    
+    // Split into lines and format
+    const lines = formatted.split('\n');
+    let html = '';
+    
+    lines.forEach((line, index) => {
+        line = line.trim();
+        if (line) {
+            if (index === 0) {
+                // First line as header if it ends with success/error indicator
+                if (line.includes('successfully') || line.includes('failed') || line.includes('error')) {
+                    html += `<div class="toast-header">${escapeHtml(line)}</div>`;
+                } else {
+                    html += `<div class="toast-body">${escapeHtml(line)}</div>`;
+                }
+            } else {
+                html += `<div class="toast-detail">${escapeHtml(line)}</div>`;
+            }
+        }
+    });
+    
+    return html;
+}
+
+function hideToast(toast) {
+    toast.classList.remove('show');
+    setTimeout(() => {
+        if (document.body.contains(toast)) {
+            document.body.removeChild(toast);
+        }
+    }, 300);
+}
+
+function showToast(message, type = 'info', duration = 8000) {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    // Format the message first
+    toast.innerHTML = formatMessage(message);
+    
+    // Create close button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'toast-close';
+    closeBtn.innerHTML = '×';
+    
+    // Add close button to toast
+    toast.appendChild(closeBtn);
+    
+    // Position calculation
+    const existingToasts = document.querySelectorAll('.toast');
+    let topOffset = 20;
+    existingToasts.forEach(existingToast => {
+        topOffset += existingToast.offsetHeight + 10;
+    });
+    toast.style.top = `${topOffset}px`;
+    
+    // Add to DOM
+    document.body.appendChild(toast);
+    
+    // Show toast with animation
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 100);
+    
+    // Auto-hide after duration
+    const autoHideTimeout = setTimeout(() => {
+        hideToast(toast);
+    }, duration);
+    
+    // Handle manual close
+    closeBtn.addEventListener('click', () => {
+        clearTimeout(autoHideTimeout);
+        hideToast(toast);
+    });
+}
+
+// Helper function for upload success messages
+function showUploadSuccessToast(postTitle, deviceIdentifier, certificatesRemaining) {
+    let message = `File uploaded successfully!\nAssociated with: ${postTitle}`;
+    
+    if (deviceIdentifier) {
+        message += `\nDevice Registration: ${deviceIdentifier}`;
+    }
+    
+    if (certificatesRemaining !== undefined) {
+        if (certificatesRemaining > 0) {
+            message += `\nYou can upload ${certificatesRemaining} more Purchase Receipt${certificatesRemaining === 1 ? '' : 's'}.`;
+        } else {
+            message += `\nYou have reached the maximum limit of 3 Purchase Receipts.`;
+        }
+    }
+    
+    showToast(message, 'success', 10000); // 10 seconds for success messages
+}
+
+// Device Identifier Extraction
 function extractDeviceIdentifier(postTitle) {
     const patterns = [
         /IMEI:\s*([A-Za-z0-9]+)/i,
@@ -180,6 +290,8 @@ function extractDeviceIdentifier(postTitle) {
     }
     return null;
 }
+
+// Post Selection Handler
 postSelect.addEventListener('change', function() {
     const selectedValue = this.value;
     const selectedPost = userPosts.find(post => post.value == selectedValue);
@@ -201,66 +313,57 @@ postSelect.addEventListener('change', function() {
         identifierTypeSpan.style.color = '#666';
     }
 });
-function showToast(message, type = 'info', duration = 4000) {
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
-    const existingToasts = document.querySelectorAll('.toast');
-    let topOffset = 20;
-    existingToasts.forEach(existingToast => {
-        topOffset += existingToast.offsetHeight + 10;
-    });
-    toast.style.top = `${topOffset}px`;
-    document.body.appendChild(toast);
-    setTimeout(() => {
-        toast.classList.add('show');
-    }, 100);
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            if (document.body.contains(toast)) {
-                document.body.removeChild(toast);
-            }
-        }, 300);
-    }, duration);
-}
+
+// Upload Form Handler
 uploadForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     console.log('=== Form Submission Started ===');
     const file = fileInput.files[0];
     const postId = postSelect.value;
     const deviceIdentifier = deviceIdentifierInput.value.trim();
-    console.log('Form submission values:', { postId, deviceIdentifier, file: file ? file.name : 'none' });
+    
+    console.log('Form submission values:', {
+        postId,
+        deviceIdentifier,
+        file: file ? file.name : 'none'
+    });
+    
     if (!file) {
         console.error('No file selected');
         showToast('Please select a file to upload', 'error');
         return;
     }
+    
     if (!postId) {
         console.error('No post selected');
         showToast('Please select a post to associate with this file', 'error');
         postSelect.focus();
         return;
     }
+    
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
         console.error('Invalid file type:', file.type);
         showToast('Please select a PDF, JPG, JPEG, or PNG file', 'error');
         return;
     }
+    
     if (file.size > 5 * 1024 * 1024) {
         console.error('File too large:', file.size);
         showToast('File size exceeds 5MB limit', 'error');
         return;
     }
+    
     console.log('All validations passed, starting upload...');
     setLoading(uploadLoading, uploadBtnText, uploadBtn, true, 'Uploading...', 'Upload Purchase Receipt');
     showToast('Starting upload...', 'info');
+    
     try {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('post_id', postId);
         formData.append('device_identifier', deviceIdentifier);
+        
         console.log('=== FormData Contents ===');
         for (let [key, value] of formData.entries()) {
             if (key === 'file') {
@@ -269,18 +372,22 @@ uploadForm.addEventListener('submit', async function(e) {
                 console.log(`${key}: "${value}"`);
             }
         }
+        
         const response = await fetch('upload.php', {
             method: 'POST',
             body: formData
         });
+        
         const responseText = await response.text();
         console.log('=== Server Response ===');
         console.log('Status:', response.status);
         console.log('Raw response:', responseText);
+        
         if (!response.ok) {
             console.error('HTTP error:', response.status);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
         let result;
         try {
             result = JSON.parse(responseText);
@@ -290,24 +397,13 @@ uploadForm.addEventListener('submit', async function(e) {
             console.error('Response text:', responseText);
             throw new Error('Invalid response format from server');
         }
+        
         if (result.success) {
             console.log('Upload successful!');
             const selectedPost = userPosts.find(post => post.value == postId);
             const postTitle = selectedPost ? selectedPost.text : 'Unknown Post';
+            showUploadSuccessToast(postTitle, deviceIdentifier, result.certificates_remaining);
             
-            let successMessage = `File uploaded successfully! File: ${result.original_filename} (Associated with: ${postTitle})`;
-            
-            if (deviceIdentifier) {
-                successMessage += ` - Device Identifier: ${deviceIdentifier}`;
-            }
-            if (result.certificates_remaining !== undefined) {
-                if (result.certificates_remaining > 0) {
-                    successMessage += ` - You can upload ${result.certificates_remaining} more Purchase Receipt${result.certificates_remaining === 1 ? '' : 's'}.`;
-                } else {
-                    successMessage += ` - You have reached the maximum limit of 3 Purchase Receipts.`;
-                }
-            }
-            showToast(successMessage, 'success', 6000);
             uploadForm.reset();
             deviceIdentifierInput.value = '';
             identifierTypeSpan.textContent = 'This field will be automatically filled when you select a post';
@@ -324,6 +420,7 @@ uploadForm.addEventListener('submit', async function(e) {
         console.error('Upload error:', error);
         showToast('Upload failed. Please check your connection and try again.', 'error');
     }
+    
     setLoading(uploadLoading, uploadBtnText, uploadBtn, false, 'Uploading...', 'Upload Purchase Receipt');
     console.log('=== Form Submission Ended ===');
 });
@@ -337,6 +434,7 @@ searchInput.addEventListener('input', function() {
         displayCertificates(allCertificates);
     }
 });
+
 clearSearchBtn.addEventListener('click', function() {
     searchInput.value = '';
     clearSearchBtn.style.display = 'none';
@@ -349,6 +447,7 @@ function showDeleteConfirmation(certificate) {
     confirmModal.classList.add('show');
     document.body.style.overflow = 'hidden';
 }
+
 function hideDeleteConfirmation() {
     confirmModal.classList.remove('show');
     document.body.style.overflow = 'auto';
@@ -361,6 +460,7 @@ async function downloadCertificate(certificate) {
             showToast('Purchase Receipt download limit exceeded!', 'error');
             return;
         }
+        
         if (remainingDownloads === 1) {
             const confirmDownload = confirm(
                 `This is your last download for this Purchase Receipt. After downloading, you won't be able to download it again. Continue?`
@@ -369,7 +469,9 @@ async function downloadCertificate(certificate) {
                 return;
             }
         }
+        
         showToast('Starting download...', 'info');
+        
         const response = await fetch('download_certificate.php', {
             method: 'POST',
             headers: {
@@ -379,10 +481,12 @@ async function downloadCertificate(certificate) {
                 certificate_id: certificate.id
             })
         });
+        
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.error || 'Download failed');
         }
+        
         const blob = await response.blob();
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -392,7 +496,9 @@ async function downloadCertificate(certificate) {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(downloadUrl);
+        
         showToast('Download completed successfully!', 'success');
+        
         setTimeout(() => {
             loadCertificates();
         }, 1000);
@@ -407,10 +513,13 @@ confirmModal.addEventListener('click', function(e) {
         hideDeleteConfirmation();
     }
 });
+
 confirmBtn.addEventListener('click', async function() {
     if (!certificateToDelete) return;
+    
     confirmBtn.disabled = true;
     confirmBtnText.textContent = 'Deleting...';
+    
     try {
         const response = await fetch('delete_certificate.php', {
             method: 'POST',
@@ -421,10 +530,13 @@ confirmBtn.addEventListener('click', async function() {
                 certificate_id: certificateToDelete.id
             })
         });
+        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
         const result = await response.json();
+        
         if (result.success) {
             showToast('Purchase Receipt deleted successfully', 'success');
             hideDeleteConfirmation();
@@ -436,20 +548,33 @@ confirmBtn.addEventListener('click', async function() {
         console.error('Delete error:', error);
         showToast('Failed to delete Purchase Receipt. Please try again.', 'error');
     }
+    
     confirmBtn.disabled = false;
     confirmBtnText.textContent = 'Delete';
 });
 function filterCertificates(query) {
     const filteredCertificates = allCertificates.filter(cert => {
         const filename = (cert.original_filename || cert.filename || '').toLowerCase();
-        const postTitle = (cert.post_title || '').toLowerCase();
         const deviceIdentifier = (cert.device_identifier || '').toLowerCase();
         const searchQuery = query.toLowerCase();
+        let postTitle = '';
         
-        return filename.includes(searchQuery) || 
-               postTitle.includes(searchQuery) || 
-               deviceIdentifier.includes(searchQuery);
+        if (cert.post_title && cert.post_title.trim()) {
+            postTitle = cert.post_title.toLowerCase();
+        } else if (cert.post_id) {
+            const matchedPost = userPosts.find(post => post.value == cert.post_id);
+            if (matchedPost) {
+                postTitle = matchedPost.text.toLowerCase();
+            } else {
+                postTitle = `post id: ${cert.post_id}`.toLowerCase();
+            }
+        }
+        
+        return filename.includes(searchQuery) ||
+            postTitle.includes(searchQuery) ||
+            deviceIdentifier.includes(searchQuery);
     });
+    
     displayCertificates(filteredCertificates);
 }
 function displayCertificates(certificates) {
@@ -464,6 +589,7 @@ function displayCertificates(certificates) {
         certificatesList.innerHTML = generateCertificateHTML(certificates);
         const certificateCount = certificates.length;
         const remaining = 3 - certificateCount;
+        
         if (remaining > 0) {
             const countInfo = document.createElement('div');
             countInfo.className = 'certificate-count-info';
@@ -500,14 +626,17 @@ async function loadCertificates() {
             }
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-
+        
         const data = await response.json();
-
+        console.log('Certificates API response:', data);
+        
         if (!data.success) {
             throw new Error(data.message || 'Failed to load certificates');
         }
-
+        
         allCertificates = data.certificates || [];
+        console.log('Loaded certificates:', allCertificates);
+        
         const query = searchInput.value.trim();
         if (query) {
             filterCertificates(query);
@@ -528,7 +657,6 @@ function generateCertificateHTML(certificates) {
         const progressPercentage = Math.round((cert.download_count / cert.max_downloads) * 100);
         const canDownload = remainingDownloads > 0;
         
-        // Debug logging
         console.log('Certificate data:', {
             id: cert.id,
             post_id: cert.post_id,
@@ -536,12 +664,10 @@ function generateCertificateHTML(certificates) {
             filename: cert.original_filename || cert.filename
         });
         
-        // Better post title handling with fallback
         let postTitle = 'Unknown Post';
         if (cert.post_title && cert.post_title.trim()) {
             postTitle = cert.post_title;
         } else if (cert.post_id) {
-            // Try to find the post title from userPosts array
             const matchedPost = userPosts.find(post => post.value == cert.post_id);
             if (matchedPost) {
                 postTitle = matchedPost.text;
@@ -594,27 +720,22 @@ function generateCertificateHTML(certificates) {
         `;
     }).join('');
 }
-
 function showMessage(target, text, type) {
     showToast(text, type);
 }
-function clearMessage(target) {}
 
+function clearMessage(target) {}
 function setLoading(loadingEl, textEl, btnEl, isLoading, loadingText, defaultText) {
     if (loadingEl) loadingEl.style.display = isLoading ? 'inline-block' : 'none';
     if (btnEl) btnEl.disabled = isLoading;
     if (textEl) textEl.textContent = isLoading ? loadingText : defaultText;
-}
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && confirmModal.classList.contains('show')) {
         hideDeleteConfirmation();
     }
 });
+
 document.addEventListener('DOMContentLoaded', function() {
     loadCertificates();
 });
@@ -626,4 +747,5 @@ document.addEventListener('visibilitychange', function() {
 });
     </script>
 </body>
+
 </html>
