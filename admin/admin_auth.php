@@ -22,11 +22,13 @@ function loadEnv($path = './../.env') {
         putenv(sprintf('%s=%s', $name, $value));
     }
 }
+
 class AdminDatabaseConfig {
     private static $host;
     private static $dbname;
     private static $username;
     private static $password;
+    
     public static function initialize() {
         loadEnv();
         self::$host = $_ENV['DB_HOST'] ?? 'localhost';
@@ -34,6 +36,7 @@ class AdminDatabaseConfig {
         self::$username = $_ENV['DB_USER'] ?? 'your_username';
         self::$password = $_ENV['DB_PASS'] ?? 'your_password';
     }
+    
     public static function getConnection() {
         try {
             if (!self::$host) {
@@ -51,29 +54,42 @@ class AdminDatabaseConfig {
         }
     }
 }
+
 function isAdminAuthenticated() {
     return isset($_SESSION['admin_logged_in']) && 
            $_SESSION['admin_logged_in'] === true && 
            isset($_SESSION['admin_id']);
 }
 
-// Remove the duplicate protectAdminPage function from here
-// It will be defined in admin_functions.php
+function protectAdminPage($redirectTo = 'admin_login.php') {
+    if (!isAdminAuthenticated()) {
+        $_SESSION['admin_redirect_after_login'] = $_SERVER['REQUEST_URI'];
+        header("Location: $redirectTo");
+        exit();
+    }
+}
 
-function authenticateAdmin($email, $username, $password) {
+/**
+ * Authenticate admin with email and password
+ * @param string $email - Admin email
+ * @param string $password - Plain text password
+ * @return array|false - Admin data on success, false on failure
+ */
+function authenticateAdmin($email, $password) {
     try {
-        loadEnv();
-        $adminPassword = $_ENV['ADMIN_PASSWORD'] ?? 'admin123';
-        if ($password !== $adminPassword) {
-            return false;
-        }
         $pdo = AdminDatabaseConfig::getConnection();
-        $stmt = $pdo->prepare("SELECT id, name, email, username, access, image, created_at, updated_at FROM admins WHERE email = ? AND username = ?");
-        $stmt->execute([$email, $username]);
+        
+        // Get admin by email
+        $stmt = $pdo->prepare("SELECT id, name, email, username, password, access, image, created_at, updated_at FROM admins WHERE email = ?");
+        $stmt->execute([$email]);
         $admin = $stmt->fetch();
-        if ($admin) {
+        
+        if ($admin && verifyAdminPassword($password, $admin['password'])) {
+            // Update last login time
             $updateStmt = $pdo->prepare("UPDATE admins SET updated_at = NOW() WHERE id = ?");
             $updateStmt->execute([$admin['id']]);
+            
+            // Set session variables
             $_SESSION['admin_logged_in'] = true;
             $_SESSION['admin_id'] = $admin['id'];
             $_SESSION['admin_name'] = $admin['name'];
@@ -82,13 +98,80 @@ function authenticateAdmin($email, $username, $password) {
             $_SESSION['admin_access'] = $admin['access'];
             $_SESSION['admin_image'] = $admin['image'];
             $_SESSION['admin_auth_time'] = time();
+            
+            // Remove password from returned admin data for security
+            unset($admin['password']);
             return $admin;
         }
+        
         return false;
     } catch (Exception $e) {
         throw new Exception("Admin authentication error: " . $e->getMessage());
     }
 }
+
+/**
+ * Hash password using Laravel-compatible method
+ * @param string $password - Plain text password
+ * @return string - Hashed password
+ */
+function hashAdminPassword($password) {
+    return password_hash($password, PASSWORD_DEFAULT);
+}
+
+/**
+ * Verify password against hash (Laravel-compatible)
+ * @param string $password - Plain text password
+ * @param string $hash - Hashed password from database
+ * @return bool - True if password matches, false otherwise
+ */
+function verifyAdminPassword($password, $hash) {
+    return password_verify($password, $hash);
+}
+
+/**
+ * Change admin password
+ * @param int $adminId - Admin ID
+ * @param string $newPassword - New plain text password
+ * @return bool - True on success, false on failure
+ */
+function changeAdminPassword($adminId, $newPassword) {
+    try {
+        $pdo = AdminDatabaseConfig::getConnection();
+        $hashedPassword = hashAdminPassword($newPassword);
+        
+        $stmt = $pdo->prepare("UPDATE admins SET password = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$hashedPassword, $adminId]);
+        
+        return $stmt->rowCount() > 0;
+    } catch (Exception $e) {
+        throw new Exception("Admin password change error: " . $e->getMessage());
+    }
+}
+
+/**
+ * Validate admin login credentials
+ * @param string $email - Admin email
+ * @param string $password - Plain text password
+ * @return bool - True if credentials are valid, false otherwise
+ */
+function validateAdminLogin($email, $password) {
+    try {
+        $pdo = AdminDatabaseConfig::getConnection();
+        $stmt = $pdo->prepare("SELECT password FROM admins WHERE email = ?");
+        $stmt->execute([$email]);
+        $admin = $stmt->fetch();
+        
+        if ($admin && verifyAdminPassword($password, $admin['password'])) {
+            return true;
+        }
+        
+        return false;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
 function getCurrentAdmin() {
     if (!isAdminAuthenticated()) {
         return null;
@@ -103,6 +186,7 @@ function getCurrentAdmin() {
         return null;
     }
 }
+
 function getAdminById($adminId) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -114,6 +198,7 @@ function getAdminById($adminId) {
         return null;
     }
 }
+
 function adminExistsByEmail($email) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -125,6 +210,7 @@ function adminExistsByEmail($email) {
         return false;
     }
 }
+
 function adminExistsByUsername($username) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -136,23 +222,28 @@ function adminExistsByUsername($username) {
         return false;
     }
 }
-function createAdmin($name, $email, $username, $access = null, $image = null) {
+
+function createAdmin($name, $email, $username, $password, $access = null, $image = null) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
+        
         if (adminExistsByEmail($email)) {
             throw new Exception("Admin with this email already exists");
         }
         if (adminExistsByUsername($username)) {
             throw new Exception("Admin with this username already exists");
         }
-        $stmt = $pdo->prepare("INSERT INTO admins (name, email, username, access, image, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())");
-        $placeholderPassword = password_hash('placeholder', PASSWORD_DEFAULT);
-        $stmt->execute([$name, $email, $username, $access, $image, $placeholderPassword]);
+        
+        $hashedPassword = hashAdminPassword($password);
+        $stmt = $pdo->prepare("INSERT INTO admins (name, email, username, password, access, image, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())");
+        $stmt->execute([$name, $email, $username, $hashedPassword, $access, $image]);
+        
         return $pdo->lastInsertId();
     } catch (Exception $e) {
         throw new Exception("Admin creation error: " . $e->getMessage());
     }
 }
+
 function updateAdmin($adminId, $data) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -167,31 +258,37 @@ function updateAdmin($adminId, $data) {
                 $values[] = $value;
             }
         }
+        
         if (empty($updateFields)) {
             throw new Exception("No valid fields to update");
         }
+        
         $values[] = $adminId;
         $sql = "UPDATE admins SET " . implode(', ', $updateFields) . ", updated_at = NOW() WHERE id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($values);
+        
         return $stmt->rowCount() > 0;
     } catch (Exception $e) {
         throw new Exception("Admin update error: " . $e->getMessage());
     }
 }
+
 function adminLogout() {
     $keysToUnset = ['admin_logged_in', 'admin_id', 'admin_name', 'admin_email', 'admin_username', 'admin_access', 'admin_image', 'admin_auth_time'];
     
     foreach ($keysToUnset as $key) {
         unset($_SESSION[$key]);
     }
-     $_SESSION = [];
+    
+    $_SESSION = [];
     if (isset($_COOKIE[session_name()])) {
        setcookie(session_name(), '', time() - 3600, '/');
     }
-     session_destroy();
+    session_destroy();
 }
-function checkAdminAuthTimeout($timeoutMinutes = 120) { // 2 hours default for admin
+
+function checkAdminAuthTimeout($timeoutMinutes = 120) { 
     if (isAdminAuthenticated() && isset($_SESSION['admin_auth_time'])) {
         if ((time() - $_SESSION['admin_auth_time']) > ($timeoutMinutes * 60)) {
             adminLogout();
@@ -201,13 +298,14 @@ function checkAdminAuthTimeout($timeoutMinutes = 120) { // 2 hours default for a
     }
     return isAdminAuthenticated();
 }
+
 function getAdminAccess() {
     if (!isAdminAuthenticated()) {
         return null;
     }
-    
     return $_SESSION['admin_access'] ?? null;
 }
+
 function hasAdminAccess($requiredAccess) {
     if (!isAdminAuthenticated()) {
         return false;
@@ -217,12 +315,15 @@ function hasAdminAccess($requiredAccess) {
     if (!$adminAccess) {
         return false;
     }
+    
     if (is_string($adminAccess)) {
         $accessArray = json_decode($adminAccess, true);
         return is_array($accessArray) && in_array($requiredAccess, $accessArray);
     }
+    
     return false;
 }
+
 function getAdminDisplayName() {
     if (!isAdminAuthenticated()) {
         return null;
@@ -230,10 +331,12 @@ function getAdminDisplayName() {
     
     return $_SESSION['admin_name'] ?? $_SESSION['admin_username'] ?? 'Admin';
 }
+
 function logAdminActivity($activity, $details = null) {
     if (!isAdminAuthenticated()) {
         return false;
     }
+    
     try {
         $pdo = AdminDatabaseConfig::getConnection();
         $createTable = "CREATE TABLE IF NOT EXISTS admin_activity_log (
@@ -248,6 +351,7 @@ function logAdminActivity($activity, $details = null) {
             INDEX idx_created_at (created_at)
         )";
         $pdo->exec($createTable);
+        
         $stmt = $pdo->prepare("INSERT INTO admin_activity_log (admin_id, activity, details, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([
             $_SESSION['admin_id'],
@@ -256,10 +360,14 @@ function logAdminActivity($activity, $details = null) {
             $_SERVER['REMOTE_ADDR'] ?? null,
             $_SERVER['HTTP_USER_AGENT'] ?? null
         ]);
+        
         return true;
     } catch (Exception $e) {
         error_log("Admin activity logging error: " . $e->getMessage());
         return false;
     }
+}
+function authenticateAdminLegacy($email, $username, $password) {
+    throw new Exception("authenticateAdminLegacy() function is deprecated. Use authenticateAdmin(\$email, \$password) instead.");
 }
 ?>

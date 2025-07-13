@@ -23,9 +23,10 @@ function isAdminLockedOut() {
     }
     return false;
 }
+
 function getAdminRemainingLockoutTime() {
     if ($_SESSION['admin_lockout_time'] !== null) {
-        $lockoutDuration = 15 * 60; // 15 minutes
+        $lockoutDuration = 15 * 60;
         $elapsed = time() - $_SESSION['admin_lockout_time'];
         $remaining = $lockoutDuration - $elapsed;
         if ($remaining > 0) {
@@ -45,14 +46,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Admin account locked due to multiple failed attempts. Please try again in $remainingTime.";
     } else {
         $email = trim($_POST['email'] ?? '');
-        $username = trim($_POST['username'] ?? '');
         $password = trim($_POST['password'] ?? '');
         
-        if (empty($email) || empty($username) || empty($password)) {
-            $error = 'Please enter email, username, and password.';
+        if (empty($email) || empty($password)) {
+            $error = 'Please enter email and password.';
         } else {
             try {
-                $admin = authenticateAdmin($email, $username, $password);
+                $admin = authenticateAdmin($email, $password);
                 
                 if ($admin) {
                     $_SESSION['admin_failed_attempts'] = 0;
@@ -443,17 +443,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             
             <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" 
-                       id="username" 
-                       name="username" 
-                       required 
-                       placeholder="Enter your admin username"
-                       value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>"
-                       <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
-            </div>
-            
-            <div class="form-group">
                 <label for="password">Password:</label>
                 <input type="password" 
                        id="password" 
@@ -470,7 +459,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
         </form>
     </div>
-    
     <div class="security-note">
         This is a secure admin area. All access attempts are logged and monitored.
     </div>
