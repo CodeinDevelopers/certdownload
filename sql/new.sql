@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS certificates (
     mime_type VARCHAR(100) NOT NULL,
     download_count INT DEFAULT 0,
     max_downloads INT DEFAULT 5,
+    post_id INT DEFAULT NULL,
+    device_identifier VARCHAR(50) DEFAULT NULL,
     deleted TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -19,6 +21,8 @@ CREATE TABLE IF NOT EXISTS certificates (
     INDEX idx_imei (imei),
     INDEX idx_vin_number (vin_number),
     INDEX idx_serial_number (serial_number),
+    INDEX idx_post_id (post_id),
+    INDEX idx_device_identifier (device_identifier),
     INDEX idx_deleted (deleted),
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

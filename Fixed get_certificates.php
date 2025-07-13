@@ -1,7 +1,5 @@
 <?php
 require_once 'auth.php';
-require_once 'posts.php';
-
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -40,13 +38,15 @@ try {
     }
 
     $pdo = DatabaseConfig::getConnection();
-    
-    // Updated query with proper JOIN to get post title
     $stmt = $pdo->prepare("
         SELECT 
             c.id,
             c.user_id,
             c.post_id,
+            c.imei,
+            c.vin_number,
+            c.serial_number,
+            c.device_identifier,
             c.filename,
             c.original_filename,
             c.file_path,
@@ -54,10 +54,6 @@ try {
             c.mime_type,
             c.download_count,
             c.max_downloads,
-            c.device_identifier,
-            c.imei,
-            c.vin_number,
-            c.serial_number,
             c.created_at,
             c.updated_at,
             p.title as post_title
@@ -69,38 +65,38 @@ try {
     
     $stmt->execute([$currentUser['id']]);
     $certificates = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Debug logging
-    error_log("Retrieved certificates for user {$currentUser['id']}: " . count($certificates));
-    
-    if (!empty($certificates)) {
-        foreach ($certificates as $index => $cert) {
-            error_log("Certificate {$index}: ID={$cert['id']}, Post ID={$cert['post_id']}, Post Title='{$cert['post_title']}'");
-            
-            // Ensure all required fields are present
-            if (empty($cert['post_title'])) {
-                // Try to get post title separately if JOIN failed
-                $postStmt = $pdo->prepare("SELECT title FROM ad_lists WHERE id = ?");
-                $postStmt->execute([$cert['post_id']]);
-                $postData = $postStmt->fetch();
-                
-                if ($postData) {
-                    $certificates[$index]['post_title'] = $postData['title'];
-                    error_log("Fixed post title for certificate {$cert['id']}: '{$postData['title']}'");
-                } else {
-                    error_log("Could not find post with ID {$cert['post_id']} for certificate {$cert['id']}");
-                }
-            }
-        }
+    $processedCertificates = [];
+    foreach ($certificates as $cert) {
+        $processedCert = [
+            'id' => (int)$cert['id'],
+            'user_id' => (int)$cert['user_id'],
+            'post_id' => (int)$cert['post_id'],
+            'imei' => $cert['imei'],
+            'vin_number' => $cert['vin_number'],
+            'serial_number' => $cert['serial_number'],
+            'device_identifier' => $cert['device_identifier'],
+            'filename' => $cert['filename'],
+            'original_filename' => $cert['original_filename'],
+            'file_path' => $cert['file_path'],
+            'file_size' => (int)$cert['file_size'],
+            'mime_type' => $cert['mime_type'],
+            'download_count' => (int)$cert['download_count'],
+            'max_downloads' => (int)$cert['max_downloads'],
+            'created_at' => $cert['created_at'],
+            'updated_at' => $cert['updated_at'],
+            'post_title' => $cert['post_title'] ?? 'Unknown Post' // This is the key fix
+        ];
+        $processedCertificates[] = $processedCert;
     }
-    
+
     echo json_encode([
         'success' => true,
-        'certificates' => $certificates
+        'certificates' => $processedCertificates,
+        'count' => count($processedCertificates)
     ]);
 
 } catch (Exception $e) {
-    error_log("Error loading certificates: " . $e->getMessage());
+    error_log("Get certificates error: " . $e->getMessage());
     
     http_response_code(500);
     echo json_encode([

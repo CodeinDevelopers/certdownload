@@ -7,6 +7,12 @@ if (!checkAuthTimeout(30)) {
     exit();
 }
 $currentUser = getCurrentUser();
+try {
+    $userPosts = getPostTitlesForDropdown();
+} catch (Exception $e) {
+    $userPosts = [];
+    error_log("Error loading user posts: " . $e->getMessage());
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -49,7 +55,7 @@ $currentUser = getCurrentUser();
                 <input
                     type="text"
                     id="searchInput"
-                    placeholder="Search by IMEI, VIN, Serial Number or filename..."
+                    placeholder="Search by post title or filename..."
                     class="search-input" />
                 <button type="button" id="clearSearch" class="clear-search-btn" style="display: none;">
                     ✕
@@ -62,43 +68,39 @@ $currentUser = getCurrentUser();
         <div class="upload-section">
             <div class="info-note">
                 <strong>Note:</strong> Accepted file formats: PDF, JPG, JPEG, PNG (up to 5MB).<br>
-                <strong>Required:</strong> Fill in at least one of the following fields: IMEI, VIN Number, or Serial Number.
+                <strong>Required:</strong> Select a post to associate with this file.
             </div>
             <form id="uploadForm" class="upload-form">
                 <div class="form-group full-width">
-                    <label for="imeiInput">IMEI Number (Optional)</label>
-                    <input
-                        type="text"
-                        id="imeiInput"
-                        name="imei"
-                        pattern="[0-9]{15}"
-                        maxlength="15"
-                        placeholder="Enter 15-digit IMEI number" />
-                    <div class="file-info">Enter the 15-digit IMEI number of your device</div>
+                    <label for="postSelect">Select Post *</label>
+                    <select id="postSelect" name="post_id" required>
+                        <option value="">-- Select a post --</option>
+                        <?php foreach ($userPosts as $post): ?>
+                            <option value="<?php echo htmlspecialchars($post['value']); ?>">
+                                <?php echo htmlspecialchars($post['text']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <div class="file-info">
+                        <?php if (empty($userPosts)): ?>
+                            <span style="color: #ff3b30;">No posts available. Please create a post first.</span>
+                        <?php else: ?>
+                            Choose the post you want to associate this file with
+                        <?php endif; ?>
+                    </div>
                 </div>
-                
+
                 <div class="form-group full-width">
-                    <label for="vinInput">VIN Number (Optional)</label>
+                    <label for="deviceIdentifier">Device Identifier</label>
                     <input
                         type="text"
-                        id="vinInput"
-                        name="vin_number"
-                        pattern="[A-HJ-NPR-Z0-9]{17}"
-                        maxlength="17"
-                        placeholder="Enter 17-character VIN number"
-                        style="text-transform: uppercase;" />
-                    <div class="file-info">Enter the 17-character Vehicle Identification Number (excludes I, O, Q)</div>
-                </div>
-                
-                <div class="form-group full-width">
-                    <label for="serialInput">Serial Number (Optional)</label>
-                    <input
-                        type="text"
-                        id="serialInput"
-                        name="serial_number"
-                        maxlength="50"
-                        placeholder="Enter device serial number" />
-                    <div class="file-info">Enter the device serial number (letters, numbers, and -, _, /, ., # allowed)</div>
+                        id="deviceIdentifier"
+                        name="device_identifier"
+                        placeholder="Device identifier will be auto-filled from selected post"
+                        class="device-identifier-input" />
+                    <div class="file-info">
+                        <span id="identifierType">This field will be automatically filled when you select a post</span>
+                    </div>
                 </div>
                 
                 <div class="form-group full-width">
@@ -112,9 +114,11 @@ $currentUser = getCurrentUser();
                     <div class="file-info">Accepted formats: PDF, JPG, JPEG, PNG (Max: 5MB)</div>
                 </div>
                 <div class="form-group full-width">
-                    <button type="submit" class="upload-btn" id="uploadBtn">
+                    <button type="submit" class="upload-btn" id="uploadBtn" <?php echo empty($userPosts) ? 'disabled' : ''; ?>>
                         <div class="loading" id="uploadLoading"></div>
-                        <span id="uploadBtnText">Upload Purchase Receipt</span>
+                        <span id="uploadBtnText">
+                            <?php echo empty($userPosts) ? 'No Posts Available' : 'Upload Purchase Receipt'; ?>
+                        </span>
                     </button>
                 </div>
             </form>
@@ -138,9 +142,12 @@ $currentUser = getCurrentUser();
         </div>
     </div>
     <script src="js/certificates.js"></script>
-    <script>
+<script>
 const uploadForm = document.getElementById('uploadForm');
 const fileInput = document.getElementById('certificateFile');
+const postSelect = document.getElementById('postSelect');
+const deviceIdentifierInput = document.getElementById('deviceIdentifier');
+const identifierTypeSpan = document.getElementById('identifierType');
 const uploadBtn = document.getElementById('uploadBtn');
 const uploadLoading = document.getElementById('uploadLoading');
 const uploadBtnText = document.getElementById('uploadBtnText');
@@ -155,110 +162,45 @@ const confirmBtn = document.getElementById('confirmBtn');
 const confirmBtnText = document.getElementById('confirmBtnText');
 let allCertificates = [];
 let certificateToDelete = null;
-
-// Auto-format VIN input to uppercase
-document.getElementById('vinInput').addEventListener('input', function(e) {
-    this.value = this.value.toUpperCase();
+const userPosts = <?php echo json_encode($userPosts); ?>;
+function extractDeviceIdentifier(postTitle) {
+    const patterns = [
+        /IMEI:\s*([A-Za-z0-9]+)/i,
+        /VIN:\s*([A-Za-z0-9]+)/i,
+        /serial:\s*([A-Za-z0-9]+)/i
+    ];
+    for (let pattern of patterns) {
+        const match = postTitle.match(pattern);
+        if (match && match[1]) {
+            return {
+                identifier: match[1],
+                type: pattern.source.split(':')[0].replace(/[^A-Za-z]/g, '').toUpperCase()
+            };
+        }
+    }
+    return null;
+}
+postSelect.addEventListener('change', function() {
+    const selectedValue = this.value;
+    const selectedPost = userPosts.find(post => post.value == selectedValue);
+    if (selectedPost) {
+        const postTitle = selectedPost.text;
+        const identifierData = extractDeviceIdentifier(postTitle);
+        if (identifierData) {
+            deviceIdentifierInput.value = identifierData.identifier;
+            identifierTypeSpan.textContent = `${identifierData.type} extracted from selected post`;
+            identifierTypeSpan.style.color = '#34c759';
+        } else {
+            deviceIdentifierInput.value = '';
+            identifierTypeSpan.textContent = 'No device identifier found in selected post';
+            identifierTypeSpan.style.color = '#ff9500';
+        }
+    } else {
+        deviceIdentifierInput.value = '';
+        identifierTypeSpan.textContent = 'This field will be automatically filled when you select a post';
+        identifierTypeSpan.style.color = '#666';
+    }
 });
-
-// Fixed validation functions with proper patterns and debugging
-function validateIMEI(imei) {
-    const pattern = /^\d{15}$/;
-    return pattern.test(imei);
-}
-
-function validateVIN(vin) {
-    // Ensure VIN is uppercase and exactly 17 characters
-    // Exclude I, O, Q as per VIN standards
-    const upperVin = vin.toUpperCase();
-    const vinPattern = /^[ABCDEFGHJKLMNPRSTUVWXYZ0-9]{17}$/;
-    return vinPattern.test(upperVin);
-}
-
-function validateSerial(serial) {
-    // Fixed regex - hyphen at the end to avoid escaping issues
-    // Allows letters, numbers, spaces, and common special characters
-    const serialPattern = /^[A-Za-z0-9_\/.#\s-]{1,50}$/;
-    return serialPattern.test(serial);
-}
-
-// Enhanced debug function to check validation
-function debugValidation(value, type) {
-    console.log(`=== Validating ${type} ===`);
-    console.log(`Original value: "${value}"`);
-    console.log(`Length: ${value.length}`);
-    console.log(`Characters: [${value.split('').join(', ')}]`);
-    
-    // Check for hidden characters
-    const charCodes = value.split('').map(char => char.charCodeAt(0));
-    console.log(`Character codes: [${charCodes.join(', ')}]`);
-    
-    // Check for non-printable characters
-    const nonPrintable = value.split('').filter(char => {
-        const code = char.charCodeAt(0);
-        return code < 32 || code > 126;
-    });
-    if (nonPrintable.length > 0) {
-        console.warn(`Non-printable characters found: [${nonPrintable.map(c => c.charCodeAt(0)).join(', ')}]`);
-    }
-    
-    switch(type) {
-        case 'VIN':
-            const upperVin = value.toUpperCase();
-            console.log(`Uppercase VIN: "${upperVin}"`);
-            console.log(`VIN validation result: ${validateVIN(value)}`);
-            
-            // Check each character against VIN pattern
-            const invalidVinChars = upperVin.split('').filter((char, index) => {
-                const isValid = /^[ABCDEFGHJKLMNPRSTUVWXYZ0-9]$/.test(char);
-                if (!isValid) {
-                    console.error(`Invalid VIN character at position ${index}: "${char}" (code: ${char.charCodeAt(0)})`);
-                }
-                return !isValid;
-            });
-            
-            if (invalidVinChars.length > 0) {
-                console.error(`Invalid VIN characters: [${invalidVinChars.join(', ')}]`);
-            }
-            break;
-            
-        case 'Serial':
-            console.log(`Serial validation result: ${validateSerial(value)}`);
-            
-            // Check each character against serial pattern
-            const invalidSerialChars = value.split('').filter((char, index) => {
-                const isValid = /^[A-Za-z0-9_\/.#\s-]$/.test(char);
-                if (!isValid) {
-                    console.error(`Invalid serial character at position ${index}: "${char}" (code: ${char.charCodeAt(0)})`);
-                }
-                return !isValid;
-            });
-            
-            if (invalidSerialChars.length > 0) {
-                console.error(`Invalid serial characters: [${invalidSerialChars.join(', ')}]`);
-            }
-            break;
-            
-        case 'IMEI':
-            console.log(`IMEI validation result: ${validateIMEI(value)}`);
-            
-            // Check each character against IMEI pattern
-            const invalidImeiChars = value.split('').filter((char, index) => {
-                const isValid = /^\d$/.test(char);
-                if (!isValid) {
-                    console.error(`Invalid IMEI character at position ${index}: "${char}" (code: ${char.charCodeAt(0)})`);
-                }
-                return !isValid;
-            });
-            
-            if (invalidImeiChars.length > 0) {
-                console.error(`Invalid IMEI characters: [${invalidImeiChars.join(', ')}]`);
-            }
-            break;
-    }
-    console.log(`=== End ${type} validation ===`);
-}
-
 function showToast(message, type = 'info', duration = 4000) {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
@@ -282,114 +224,43 @@ function showToast(message, type = 'info', duration = 4000) {
         }, 300);
     }, duration);
 }
-
-// Enhanced form submission handler with comprehensive validation
 uploadForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     console.log('=== Form Submission Started ===');
-    
     const file = fileInput.files[0];
-    const imeiInput = document.getElementById('imeiInput');
-    const vinInput = document.getElementById('vinInput');
-    const serialInput = document.getElementById('serialInput');
-    
-    const imei = imeiInput.value.trim();
-    const vin = vinInput.value.trim().toUpperCase(); // Ensure uppercase
-    const serial = serialInput.value.trim();
-
-    console.log('Form submission values:', { imei, vin, serial });
-    
-    // Detailed validation logging
-    console.log('=== Validation Checks ===');
-    console.log('IMEI provided:', !!imei);
-    console.log('VIN provided:', !!vin);
-    console.log('Serial provided:', !!serial);
-    
-    if (imei) {
-        console.log('IMEI valid:', validateIMEI(imei));
-    }
-    if (vin) {
-        console.log('VIN valid:', validateVIN(vin));
-    }
-    if (serial) {
-        console.log('Serial valid:', validateSerial(serial));
-    }
-
+    const postId = postSelect.value;
+    const deviceIdentifier = deviceIdentifierInput.value.trim();
+    console.log('Form submission values:', { postId, deviceIdentifier, file: file ? file.name : 'none' });
     if (!file) {
         console.error('No file selected');
         showToast('Please select a file to upload', 'error');
         return;
     }
-
-    // Check if at least one field is filled
-    if (!imei && !vin && !serial) {
-        console.error('No identifier fields filled');
-        showToast('Please fill in at least one field: IMEI, VIN Number, or Serial Number', 'error');
+    if (!postId) {
+        console.error('No post selected');
+        showToast('Please select a post to associate with this file', 'error');
+        postSelect.focus();
         return;
     }
-
-    // Validate filled fields with detailed debugging
-    if (imei && !validateIMEI(imei)) {
-        console.error('IMEI validation failed');
-        debugValidation(imei, 'IMEI');
-        showToast('IMEI must be exactly 15 digits', 'error');
-        imeiInput.focus();
-        return;
-    }
-
-    if (vin && !validateVIN(vin)) {
-        console.error('VIN validation failed');
-        debugValidation(vin, 'VIN');
-        showToast('VIN must be exactly 17 characters (letters and numbers, excluding I, O, Q)', 'error');
-        vinInput.focus();
-        return;
-    }
-
-    if (serial && !validateSerial(serial)) {
-        console.error('Serial validation failed');
-        debugValidation(serial, 'Serial');
-        showToast('Serial number contains invalid characters. Only letters, numbers, spaces, and -, _, /, ., # are allowed', 'error');
-        serialInput.focus();
-        return;
-    }
-
-    // File validation
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
         console.error('Invalid file type:', file.type);
         showToast('Please select a PDF, JPG, JPEG, or PNG file', 'error');
         return;
     }
-
     if (file.size > 5 * 1024 * 1024) {
         console.error('File too large:', file.size);
         showToast('File size exceeds 5MB limit', 'error');
         return;
     }
-
     console.log('All validations passed, starting upload...');
     setLoading(uploadLoading, uploadBtnText, uploadBtn, true, 'Uploading...', 'Upload Purchase Receipt');
     showToast('Starting upload...', 'info');
-
     try {
         const formData = new FormData();
         formData.append('file', file);
-        
-        // Only append fields that have values
-        if (imei) {
-            formData.append('imei', imei);
-            console.log('Added IMEI to FormData:', imei);
-        }
-        if (vin) {
-            formData.append('vin_number', vin);
-            console.log('Added VIN to FormData:', vin);
-        }
-        if (serial) {
-            formData.append('serial_number', serial);
-            console.log('Added Serial to FormData:', serial);
-        }
-
-        // Debug FormData contents
+        formData.append('post_id', postId);
+        formData.append('device_identifier', deviceIdentifier);
         console.log('=== FormData Contents ===');
         for (let [key, value] of formData.entries()) {
             if (key === 'file') {
@@ -398,23 +269,18 @@ uploadForm.addEventListener('submit', async function(e) {
                 console.log(`${key}: "${value}"`);
             }
         }
-
         const response = await fetch('upload.php', {
             method: 'POST',
             body: formData
         });
-
-        // Get response text first to see what's actually returned
         const responseText = await response.text();
         console.log('=== Server Response ===');
         console.log('Status:', response.status);
         console.log('Raw response:', responseText);
-
         if (!response.ok) {
             console.error('HTTP error:', response.status);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-
         let result;
         try {
             result = JSON.parse(responseText);
@@ -424,19 +290,16 @@ uploadForm.addEventListener('submit', async function(e) {
             console.error('Response text:', responseText);
             throw new Error('Invalid response format from server');
         }
-
         if (result.success) {
             console.log('Upload successful!');
-            let identifierInfo = [];
-            if (result.imei) identifierInfo.push(`IMEI: ${result.imei}`);
-            if (result.vin_number) identifierInfo.push(`VIN: ${result.vin_number}`);
-            if (result.serial_number) identifierInfo.push(`Serial: ${result.serial_number}`);
+            const selectedPost = userPosts.find(post => post.value == postId);
+            const postTitle = selectedPost ? selectedPost.text : 'Unknown Post';
             
-            let successMessage = `File uploaded successfully! File: ${result.original_filename}`;
-            if (identifierInfo.length > 0) {
-                successMessage += ` (${identifierInfo.join(', ')})`;
+            let successMessage = `File uploaded successfully! File: ${result.original_filename} (Associated with: ${postTitle})`;
+            
+            if (deviceIdentifier) {
+                successMessage += ` - Device Identifier: ${deviceIdentifier}`;
             }
-            
             if (result.certificates_remaining !== undefined) {
                 if (result.certificates_remaining > 0) {
                     successMessage += ` - You can upload ${result.certificates_remaining} more Purchase Receipt${result.certificates_remaining === 1 ? '' : 's'}.`;
@@ -444,9 +307,12 @@ uploadForm.addEventListener('submit', async function(e) {
                     successMessage += ` - You have reached the maximum limit of 3 Purchase Receipts.`;
                 }
             }
-
             showToast(successMessage, 'success', 6000);
             uploadForm.reset();
+            deviceIdentifierInput.value = '';
+            identifierTypeSpan.textContent = 'This field will be automatically filled when you select a post';
+            identifierTypeSpan.style.color = '#666';
+            
             setTimeout(() => {
                 loadCertificates();
             }, 1000);
@@ -458,12 +324,9 @@ uploadForm.addEventListener('submit', async function(e) {
         console.error('Upload error:', error);
         showToast('Upload failed. Please check your connection and try again.', 'error');
     }
-
     setLoading(uploadLoading, uploadBtnText, uploadBtn, false, 'Uploading...', 'Upload Purchase Receipt');
     console.log('=== Form Submission Ended ===');
 });
-
-// Search functionality
 searchInput.addEventListener('input', function() {
     const query = this.value.trim();
     if (query) {
@@ -474,27 +337,23 @@ searchInput.addEventListener('input', function() {
         displayCertificates(allCertificates);
     }
 });
-
 clearSearchBtn.addEventListener('click', function() {
     searchInput.value = '';
     clearSearchBtn.style.display = 'none';
     displayCertificates(allCertificates);
     searchInput.focus();
 });
-
 function showDeleteConfirmation(certificate) {
     certificateToDelete = certificate;
     modalFilename.textContent = certificate.original_filename || certificate.filename;
     confirmModal.classList.add('show');
     document.body.style.overflow = 'hidden';
 }
-
 function hideDeleteConfirmation() {
     confirmModal.classList.remove('show');
     document.body.style.overflow = 'auto';
     certificateToDelete = null;
 }
-
 async function downloadCertificate(certificate) {
     try {
         const remainingDownloads = certificate.max_downloads - certificate.download_count;
@@ -502,7 +361,6 @@ async function downloadCertificate(certificate) {
             showToast('Purchase Receipt download limit exceeded!', 'error');
             return;
         }
-
         if (remainingDownloads === 1) {
             const confirmDownload = confirm(
                 `This is your last download for this Purchase Receipt. After downloading, you won't be able to download it again. Continue?`
@@ -511,9 +369,7 @@ async function downloadCertificate(certificate) {
                 return;
             }
         }
-
         showToast('Starting download...', 'info');
-
         const response = await fetch('download_certificate.php', {
             method: 'POST',
             headers: {
@@ -523,12 +379,10 @@ async function downloadCertificate(certificate) {
                 certificate_id: certificate.id
             })
         });
-
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.error || 'Download failed');
         }
-
         const blob = await response.blob();
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -538,31 +392,25 @@ async function downloadCertificate(certificate) {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(downloadUrl);
-
         showToast('Download completed successfully!', 'success');
         setTimeout(() => {
             loadCertificates();
         }, 1000);
-
     } catch (error) {
         console.error('Download error:', error);
         showToast('Download failed: ' + error.message, 'error');
     }
 }
-
 cancelBtn.addEventListener('click', hideDeleteConfirmation);
 confirmModal.addEventListener('click', function(e) {
     if (e.target === confirmModal) {
         hideDeleteConfirmation();
     }
 });
-
 confirmBtn.addEventListener('click', async function() {
     if (!certificateToDelete) return;
-
     confirmBtn.disabled = true;
     confirmBtnText.textContent = 'Deleting...';
-
     try {
         const response = await fetch('delete_certificate.php', {
             method: 'POST',
@@ -573,13 +421,10 @@ confirmBtn.addEventListener('click', async function() {
                 certificate_id: certificateToDelete.id
             })
         });
-
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-
         const result = await response.json();
-
         if (result.success) {
             showToast('Purchase Receipt deleted successfully', 'success');
             hideDeleteConfirmation();
@@ -591,27 +436,22 @@ confirmBtn.addEventListener('click', async function() {
         console.error('Delete error:', error);
         showToast('Failed to delete Purchase Receipt. Please try again.', 'error');
     }
-
     confirmBtn.disabled = false;
     confirmBtnText.textContent = 'Delete';
 });
-
 function filterCertificates(query) {
     const filteredCertificates = allCertificates.filter(cert => {
         const filename = (cert.original_filename || cert.filename || '').toLowerCase();
-        const imei = (cert.imei || '').toLowerCase();
-        const vin = (cert.vin_number || '').toLowerCase();
-        const serial = (cert.serial_number || '').toLowerCase();
+        const postTitle = (cert.post_title || '').toLowerCase();
+        const deviceIdentifier = (cert.device_identifier || '').toLowerCase();
         const searchQuery = query.toLowerCase();
         
         return filename.includes(searchQuery) || 
-               imei.includes(searchQuery) || 
-               vin.includes(searchQuery) || 
-               serial.includes(searchQuery);
+               postTitle.includes(searchQuery) || 
+               deviceIdentifier.includes(searchQuery);
     });
     displayCertificates(filteredCertificates);
 }
-
 function displayCertificates(certificates) {
     if (certificates.length === 0) {
         const query = searchInput.value.trim();
@@ -624,7 +464,6 @@ function displayCertificates(certificates) {
         certificatesList.innerHTML = generateCertificateHTML(certificates);
         const certificateCount = certificates.length;
         const remaining = 3 - certificateCount;
-
         if (remaining > 0) {
             const countInfo = document.createElement('div');
             countInfo.className = 'certificate-count-info';
@@ -648,7 +487,6 @@ function displayCertificates(certificates) {
         }
     }
 }
-
 async function loadCertificates() {
     try {
         certificatesList.innerHTML = '<div class="empty-state">Loading files...</div>';
@@ -682,7 +520,6 @@ async function loadCertificates() {
         showToast('Unable to load files. Please refresh the page.', 'error');
     }
 }
-
 function generateCertificateHTML(certificates) {
     return certificates.map(cert => {
         const remainingDownloads = cert.max_downloads - cert.download_count;
@@ -690,20 +527,39 @@ function generateCertificateHTML(certificates) {
         const statusText = remainingDownloads > 0 ? 'Active' : 'Expired';
         const progressPercentage = Math.round((cert.download_count / cert.max_downloads) * 100);
         const canDownload = remainingDownloads > 0;
-
-        // Build identifier info
-        let identifierInfo = [];
-        if (cert.imei) identifierInfo.push(`IMEI: ${escapeHtml(cert.imei)}`);
-        if (cert.vin_number) identifierInfo.push(`VIN: ${escapeHtml(cert.vin_number)}`);
-        if (cert.serial_number) identifierInfo.push(`Serial: ${escapeHtml(cert.serial_number)}`);
-
+        
+        // Debug logging
+        console.log('Certificate data:', {
+            id: cert.id,
+            post_id: cert.post_id,
+            post_title: cert.post_title,
+            filename: cert.original_filename || cert.filename
+        });
+        
+        // Better post title handling with fallback
+        let postTitle = 'Unknown Post';
+        if (cert.post_title && cert.post_title.trim()) {
+            postTitle = cert.post_title;
+        } else if (cert.post_id) {
+            // Try to find the post title from userPosts array
+            const matchedPost = userPosts.find(post => post.value == cert.post_id);
+            if (matchedPost) {
+                postTitle = matchedPost.text;
+                console.log(`Found post title from userPosts: ${postTitle}`);
+            } else {
+                postTitle = `Post ID: ${cert.post_id}`;
+                console.warn(`No post title found for post ID: ${cert.post_id}`);
+            }
+        }
+        
         return `
             <div class="certificate-item">
                 <div class="cert-header">
                     <div class="cert-info">
                         <div class="cert-name">${escapeHtml(cert.original_filename || cert.filename)}</div>
                         <div class="cert-phone">Uploaded: ${new Date(cert.created_at).toLocaleDateString()}</div>
-                        <div class="cert-identifiers">${identifierInfo.join(' • ')}</div>
+                        <div class="cert-identifiers">Associated Post: ${escapeHtml(postTitle)}</div>
+                        ${cert.device_identifier ? `<div class="cert-identifiers">Device ID: ${escapeHtml(cert.device_identifier)}</div>` : ''}
                     </div>
                 </div>
                 <div class="cert-stats">
@@ -742,7 +598,6 @@ function generateCertificateHTML(certificates) {
 function showMessage(target, text, type) {
     showToast(text, type);
 }
-
 function clearMessage(target) {}
 
 function setLoading(loadingEl, textEl, btnEl, isLoading, loadingText, defaultText) {
@@ -750,25 +605,20 @@ function setLoading(loadingEl, textEl, btnEl, isLoading, loadingText, defaultTex
     if (btnEl) btnEl.disabled = isLoading;
     if (textEl) textEl.textContent = isLoading ? loadingText : defaultText;
 }
-
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
-
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && confirmModal.classList.contains('show')) {
         hideDeleteConfirmation();
     }
 });
-
 document.addEventListener('DOMContentLoaded', function() {
     loadCertificates();
 });
-
 setInterval(loadCertificates, 30000);
-
 document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
         loadCertificates();
