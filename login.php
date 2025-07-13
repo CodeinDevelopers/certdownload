@@ -477,13 +477,6 @@ input[type="password"]:disabled {
         <?php if ($success): ?>
             <div class="success"><?php echo htmlspecialchars($success); ?></div>
         <?php endif; ?>
-        
-        <?php if (!$currentlyLockedOut && $_SESSION['failed_attempts'] > 0): ?>
-            <div class="attempts-info">
-                ⚠️ Failed attempts: <?php echo $_SESSION['failed_attempts']; ?>/3
-            </div>
-        <?php endif; ?>
-        
         <form method="POST" action="">
             <div class="form-group">
                 <label for="mobile">Mobile Number:</label>

@@ -1,5 +1,6 @@
 <?php
 require_once 'auth.php';
+require_once 'posts.php';
 protectPage('login.php');
 if (!checkAuthTimeout(30)) {
     header('Location: login.php');
