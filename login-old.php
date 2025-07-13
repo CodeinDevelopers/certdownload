@@ -41,12 +41,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Account locked due to multiple failed attempts. Please try again in $remainingTime.";
     } else {
         $mobile = trim($_POST['mobile'] ?? '');
-        $password = trim($_POST['password'] ?? '');
-        if (empty($mobile) || empty($password)) {
-            $error = 'Please enter both mobile number and password.';
+        $email = trim($_POST['email'] ?? '');
+        if (empty($mobile) || empty($email)) {
+            $error = 'Please enter both mobile number and email address.';
         } else {
             try {
-                $user = authenticateUser($mobile, $password);
+                $user = authenticateUser($mobile, $email);
                 
                 if ($user) {
                     $_SESSION['failed_attempts'] = 0;
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $remainingTime = "10:00";
                     } else {
                         $remainingAttempts = 3 - $_SESSION['failed_attempts'];
-                        $error = "Invalid mobile number or password. $remainingAttempts attempt(s) remaining before lockout.";
+                        $error = "Invalid mobile number or email address. $remainingAttempts attempt(s) remaining before lockout.";
                     }
                 }
             } catch (Exception $e) {
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Protected Area - Login Required</title>
     <style>
-* {
+       * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -167,8 +167,7 @@ label {
 }
 
 input[type="text"], 
-input[type="email"],
-input[type="password"] {
+input[type="email"] {
     width: 100%;
     padding: 12px 16px;
     font-size: 16px;
@@ -181,54 +180,23 @@ input[type="password"] {
 }
 
 input[type="text"]:focus, 
-input[type="email"]:focus,
-input[type="password"]:focus {
+input[type="email"]:focus {
     outline: none;
     border-color: #0070f3;
     box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
 }
 
 input[type="text"]::placeholder,
-input[type="email"]::placeholder,
-input[type="password"]::placeholder {
+input[type="email"]::placeholder {
     color: #6c757d;
 }
 
 input[type="text"]:disabled, 
-input[type="email"]:disabled,
-input[type="password"]:disabled {
+input[type="email"]:disabled {
     background-color: #f5f5f5;
     color: #6c757d;
     cursor: not-allowed;
     opacity: 0.7;
-}
-
-.password-container {
-    position: relative;
-}
-
-.password-toggle {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 18px;
-    color: #6c757d;
-    padding: 4px;
-    border-radius: 4px;
-    transition: color 0.2s ease;
-}
-
-.password-toggle:hover {
-    color: #212529;
-}
-
-.password-toggle:focus {
-    outline: none;
-    color: #0070f3;
 }
 
 .btn {
@@ -313,7 +281,6 @@ input[type="password"]:disabled {
     padding: 8px 12px;
     border-radius: 6px;
 }
-
 .loading {
     display: inline-block;
     width: 20px;
@@ -329,37 +296,6 @@ input[type="password"]:disabled {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-
-.forgot-password {
-    text-align: center;
-    margin-top: 16px;
-}
-
-.forgot-password a {
-    color: #0070f3;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    transition: color 0.2s ease;
-}
-
-.forgot-password a:hover {
-    color: #0056b3;
-    text-decoration: underline;
-}
-
-.security-info {
-    background: rgba(13, 110, 253, 0.1);
-    border: 1px solid rgba(13, 110, 253, 0.3);
-    color: #0a58ca;
-    padding: 10px 12px;
-    border-radius: 6px;
-    margin-bottom: 16px;
-    font-size: 12px;
-    text-align: center;
-    border-left: 4px solid #0d6efd;
-}
-
 @media (max-width: 480px) {
     body {
         padding: 16px;
@@ -383,8 +319,7 @@ input[type="password"]:disabled {
     }
     
     input[type="text"], 
-    input[type="email"],
-    input[type="password"] {
+    input[type="email"] {
         font-size: 14px;
         padding: 10px 14px;
     }
@@ -392,11 +327,6 @@ input[type="password"]:disabled {
     .btn {
         font-size: 14px;
         padding: 10px 20px;
-    }
-    
-    .password-toggle {
-        font-size: 16px;
-        right: 10px;
     }
 }
     </style>
@@ -433,10 +363,8 @@ input[type="password"]:disabled {
     
     <div class="login-container">
         <div class="login-header">
-            <h2>Welcome Back</h2>
-            <p>Please sign in to your account</p>
+            <p>Please enter your mobile number and email to continue</p>
         </div>
-        
         <?php if ($currentlyLockedOut): ?>
             <div class="lockout-info">
                 <strong>Account Locked</strong><br>
@@ -444,21 +372,17 @@ input[type="password"]:disabled {
                 <span class="lockout-timer" id="lockout-timer"><?php echo $remainingTime; ?></span>
             </div>
         <?php endif; ?>
-        
         <?php if ($error): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
-        
         <?php if ($success): ?>
             <div class="success"><?php echo htmlspecialchars($success); ?></div>
         <?php endif; ?>
-        
         <?php if (!$currentlyLockedOut && $_SESSION['failed_attempts'] > 0): ?>
             <div class="attempts-info">
-                ⚠️ Failed attempts: <?php echo $_SESSION['failed_attempts']; ?>/3
+                Failed attempts: <?php echo $_SESSION['failed_attempts']; ?>/3
             </div>
         <?php endif; ?>
-        
         <form method="POST" action="">
             <div class="form-group">
                 <label for="mobile">Mobile Number:</label>
@@ -471,71 +395,22 @@ input[type="password"]:disabled {
                        value="<?php echo htmlspecialchars($_POST['mobile'] ?? ''); ?>"
                        <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
             </div>
-            
             <div class="form-group">
-                <label for="password">Password:</label>
-                <div class="password-container">
-                    <input type="password" 
-                           id="password" 
-                           name="password" 
-                           required 
-                           placeholder="Enter your password"
-                           <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
-                    <button type="button" 
-                            class="password-toggle" 
-                            onclick="togglePassword()"
-                            <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
-                        👁️
-                    </button>
-                </div>
+                <label for="email">Email Address:</label>
+                <input type="email" 
+                       id="email" 
+                       name="email" 
+                       required 
+                       placeholder="Enter your email address"
+                       value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
+                       <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
             </div>
-            
             <button type="submit" 
                     class="btn" 
                     <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
-                <?php echo $currentlyLockedOut ? 'Account Locked' : 'Sign In'; ?>
+                <?php echo $currentlyLockedOut ? 'Account Locked' : 'Login'; ?>
             </button>
         </form>
-        
-        <?php if (!$currentlyLockedOut): ?>
-            <div class="forgot-password">
-                <a href="forgot-password.php">Forgot your password?</a>
-            </div>
-        <?php endif; ?>
     </div>
-
-    <script>
-        function togglePassword() {
-            const passwordInput = document.getElementById('password');
-            const toggleButton = document.querySelector('.password-toggle');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggleButton.textContent = '🙈';
-                toggleButton.setAttribute('aria-label', 'Hide password');
-            } else {
-                passwordInput.type = 'password';
-                toggleButton.textContent = '👁️';
-                toggleButton.setAttribute('aria-label', 'Show password');
-            }
-        }
-        
-        // Add loading state to form submission
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const submitBtn = document.querySelector('.btn');
-            if (!submitBtn.disabled) {
-                submitBtn.innerHTML = '<span class="loading"></span>Signing in...';
-                submitBtn.disabled = true;
-            }
-        });
-        
-        // Auto-focus on mobile input when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            const mobileInput = document.getElementById('mobile');
-            if (mobileInput && !mobileInput.disabled) {
-                mobileInput.focus();
-            }
-        });
-    </script>
 </body>
 </html>
