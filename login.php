@@ -42,8 +42,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $mobile = trim($_POST['mobile'] ?? '');
         $password = trim($_POST['password'] ?? '');
+        
+        // Validate mobile number format
         if (empty($mobile) || empty($password)) {
             $error = 'Please enter both mobile number and password.';
+        } elseif (!preg_match('/^\d{11}$/', $mobile)) {
+            $error = 'Mobile number must be exactly 11 digits.';
         } else {
             try {
                 $user = authenticateUser($mobile, $password);
@@ -360,6 +364,28 @@ input[type="password"]:disabled {
     border-left: 4px solid #0d6efd;
 }
 
+.input-hint {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 4px;
+    display: block;
+}
+
+.input-counter {
+    font-size: 12px;
+    color: #6c757d;
+    text-align: right;
+    margin-top: 4px;
+}
+
+.input-counter.valid {
+    color: #28a745;
+}
+
+.input-counter.invalid {
+    color: #dc3545;
+}
+
 @media (max-width: 480px) {
     body {
         padding: 16px;
@@ -433,8 +459,7 @@ input[type="password"]:disabled {
     
     <div class="login-container">
         <div class="login-header">
-            <h2>Welcome Back</h2>
-            <p>Please sign in to your account</p>
+            <p>Confirm your identity to proceed</p>
         </div>
         
         <?php if ($currentlyLockedOut): ?>
@@ -467,9 +492,14 @@ input[type="password"]:disabled {
                        name="mobile" 
                        required 
                        autofocus
-                       placeholder="Enter your mobile number"
+                       placeholder="Enter 11-digit mobile number"
                        value="<?php echo htmlspecialchars($_POST['mobile'] ?? ''); ?>"
+                       maxlength="11"
+                       pattern="[0-9]{11}"
+                       inputmode="numeric"
                        <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
+                <span class="input-hint">Enter exactly 11 digits (numbers only)</span>
+                <div class="input-counter" id="mobile-counter">0/11</div>
             </div>
             
             <div class="form-group">
@@ -492,6 +522,7 @@ input[type="password"]:disabled {
             
             <button type="submit" 
                     class="btn" 
+                    id="submit-btn"
                     <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
                 <?php echo $currentlyLockedOut ? 'Account Locked' : 'Sign In'; ?>
             </button>
@@ -499,7 +530,7 @@ input[type="password"]:disabled {
         
         <?php if (!$currentlyLockedOut): ?>
             <div class="forgot-password">
-                <a href="forgot-password.php">Forgot your password?</a>
+                <a href="https://www.safernaija.com.ng/user/password/reset">Forgot your password?</a>
             </div>
         <?php endif; ?>
     </div>
@@ -520,20 +551,94 @@ input[type="password"]:disabled {
             }
         }
         
+        // Mobile number validation and formatting
+        document.getElementById('mobile').addEventListener('input', function(e) {
+            // Remove all non-digit characters
+            let value = e.target.value.replace(/\D/g, '');
+            
+            // Limit to 11 digits
+            if (value.length > 11) {
+                value = value.slice(0, 11);
+            }
+            
+            // Update the input value
+            e.target.value = value;
+            
+            // Update counter
+            const counter = document.getElementById('mobile-counter');
+            const submitBtn = document.getElementById('submit-btn');
+            
+            counter.textContent = value.length + '/11';
+            
+            // Update counter styling and button state
+            if (value.length === 11) {
+                counter.classList.add('valid');
+                counter.classList.remove('invalid');
+                submitBtn.disabled = false;
+            } else if (value.length > 0) {
+                counter.classList.add('invalid');
+                counter.classList.remove('valid');
+                submitBtn.disabled = true;
+            } else {
+                counter.classList.remove('valid', 'invalid');
+                submitBtn.disabled = false;
+            }
+        });
+        
+        // Prevent non-numeric input
+        document.getElementById('mobile').addEventListener('keypress', function(e) {
+            // Allow only numeric keys, backspace, delete, tab, escape, enter
+            if (!/[0-9]/.test(e.key) && 
+                !['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+        
+        // Prevent paste of non-numeric content
+        document.getElementById('mobile').addEventListener('paste', function(e) {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text');
+            const numericOnly = paste.replace(/\D/g, '').slice(0, 11);
+            e.target.value = numericOnly;
+            
+            // Trigger input event to update counter
+            e.target.dispatchEvent(new Event('input'));
+        });
+        
         // Add loading state to form submission
         document.querySelector('form').addEventListener('submit', function(e) {
+            const mobileInput = document.getElementById('mobile');
             const submitBtn = document.querySelector('.btn');
+            
+            // Final validation before submission
+            if (mobileInput.value.length !== 11) {
+                e.preventDefault();
+                alert('Please enter exactly 11 digits for your mobile number.');
+                mobileInput.focus();
+                return;
+            }
+            
             if (!submitBtn.disabled) {
                 submitBtn.innerHTML = '<span class="loading"></span>Signing in...';
                 submitBtn.disabled = true;
             }
         });
         
-        // Auto-focus on mobile input when page loads
+        // Auto-focus on mobile input when page loads and initialize counter
         document.addEventListener('DOMContentLoaded', function() {
             const mobileInput = document.getElementById('mobile');
             if (mobileInput && !mobileInput.disabled) {
                 mobileInput.focus();
+                // Initialize counter
+                const counter = document.getElementById('mobile-counter');
+                counter.textContent = mobileInput.value.length + '/11';
+                
+                // Check if current value is valid
+                if (mobileInput.value.length === 11) {
+                    counter.classList.add('valid');
+                } else if (mobileInput.value.length > 0) {
+                    counter.classList.add('invalid');
+                }
             }
         });
     </script>
