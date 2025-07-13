@@ -80,8 +80,14 @@ try {
             error_log("Info: Physical file preserved for deleted certificate: {$filePath}");
         }
         $pdo->commit();
+
+
+        $logDir = './logs/';
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0755, true);
+        }
         $logEntry = date('Y-m-d H:i:s') . " - SOFT DELETED: {$certificate['filename']} (Original: {$certificate['original_filename']}) for User ID: {$currentUser['id']} ({$currentUser['firstname']} {$currentUser['lastname']}) - Mobile: {$currentUser['mobile']} - IMEI: {$certificate['imei']} - File preserved at: {$certificate['file_path']}\n";
-        file_put_contents('./logs/deletion_log.txt', $logEntry, FILE_APPEND | LOCK_EX);
+        file_put_contents($logDir . 'deletion_log.txt', $logEntry, FILE_APPEND | LOCK_EX);
         echo json_encode([
             'success' => true,
             'message' => 'Certificate deleted successfully (file preserved)',

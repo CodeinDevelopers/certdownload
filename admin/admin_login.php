@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['admin_lockout_time'] = null;
                     $success = 'Admin authentication successful!';
                     
-                    $redirectTo = $_SESSION['admin_redirect_after_login'] ?? 'admin_dashboard.php';
+                    $redirectTo = $_SESSION['admin_redirect_after_login'] ?? 'index.php';
                     unset($_SESSION['admin_redirect_after_login']);
                     
                     header("Location: $redirectTo");

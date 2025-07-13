@@ -1,19 +1,25 @@
 <?php
 require_once 'admin_auth.php';
+
 function isAdmin() {
     return isAdminAuthenticated();
 }
+
+// Enhanced protectAdminPage function with timeout check
 function protectAdminPage($redirectTo = 'admin_login.php') {
     if (!isAdminAuthenticated()) {
         $_SESSION['admin_redirect_after_login'] = $_SERVER['REQUEST_URI'];
         header("Location: $redirectTo");
         exit();
     }
+    
+    // Check for session timeout
     if (!checkAdminAuthTimeout()) {
         header("Location: $redirectTo");
         exit();
     }
 }
+
 function getUsers($page = 1, $perPage = 20, $search = '') {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -26,10 +32,14 @@ function getUsers($page = 1, $perPage = 20, $search = '') {
             $searchParam = "%$search%";
             $params = [$searchParam, $searchParam, $searchParam, $searchParam];
         }
+        
+        // Get total count
         $countSql = "SELECT COUNT(*) as total FROM users $whereClause";
         $countStmt = $pdo->prepare($countSql);
         $countStmt->execute($params);
         $totalUsers = $countStmt->fetch()['total'];
+        
+        // Get users
         $sql = "SELECT id, firstname, lastname, username, email, mobile, status, ev, sv, balance, created_at, updated_at 
                 FROM users $whereClause 
                 ORDER BY created_at DESC 
@@ -40,7 +50,9 @@ function getUsers($page = 1, $perPage = 20, $search = '') {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $users = $stmt->fetchAll();
+        
         logAdminActivity('View Users', "Page: $page, Search: $search");
+        
         return [
             'users' => $users,
             'total' => $totalUsers,
@@ -53,6 +65,7 @@ function getUsers($page = 1, $perPage = 20, $search = '') {
         throw new Exception("Error fetching users: " . $e->getMessage());
     }
 }
+
 function getUserCertificates($userId) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -66,6 +79,7 @@ function getUserCertificates($userId) {
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$userId]);
         $certificates = $stmt->fetchAll();
+        
         logAdminActivity('View User Certificates', "User ID: $userId");
         return $certificates;
         
@@ -74,38 +88,58 @@ function getUserCertificates($userId) {
         throw new Exception("Error fetching certificates: " . $e->getMessage());
     }
 }
+
 function getUserStats() {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
         $stats = [];
+        
+        // Total users
         $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM users");
         $stmt->execute();
         $stats['total_users'] = $stmt->fetch()['total'];
+        
+        // Active users
         $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM users WHERE status = 1");
         $stmt->execute();
         $stats['active_users'] = $stmt->fetch()['total'];
+        
+        // Inactive users
         $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM users WHERE status = 0");
         $stmt->execute();
         $stats['inactive_users'] = $stmt->fetch()['total'];
+        
+        // Total certificates
         $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM certificates WHERE deleted = 0");
         $stmt->execute();
         $stats['total_certificates'] = $stmt->fetch()['total'];
+        
+        // Users with certificates
         $stmt = $pdo->prepare("SELECT COUNT(DISTINCT user_id) as total FROM certificates WHERE deleted = 0");
         $stmt->execute();
         $stats['users_with_certificates'] = $stmt->fetch()['total'];
+        
+        // Email verified users
         $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM users WHERE ev = 1");
         $stmt->execute();
         $stats['email_verified'] = $stmt->fetch()['total'];
+        
+        // SMS verified users
         $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM users WHERE sv = 1");
         $stmt->execute();
         $stats['sms_verified'] = $stmt->fetch()['total'];
+        
+        // Recent registrations (last 30 days)
         $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
         $stmt->execute();
         $stats['recent_registrations'] = $stmt->fetch()['total'];
+        
+        // Total downloads
         $stmt = $pdo->prepare("SELECT SUM(download_count) as total FROM certificates WHERE deleted = 0");
         $stmt->execute();
         $result = $stmt->fetch();
         $stats['total_downloads'] = $result['total'] ?? 0;
+        
         logAdminActivity('View Dashboard Stats', 'Dashboard statistics accessed');
         return $stats;
     } catch (Exception $e) {
@@ -113,9 +147,12 @@ function getUserStats() {
         throw new Exception("Error fetching stats: " . $e->getMessage());
     }
 }
+
 function deleteCertificate($certificateId) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
+        
+        // Get certificate details first
         $stmt = $pdo->prepare("SELECT file_path, original_filename, user_id FROM certificates WHERE id = ? AND deleted = 0");
         $stmt->execute([$certificateId]);
         $certificate = $stmt->fetch();
@@ -123,11 +160,16 @@ function deleteCertificate($certificateId) {
         if (!$certificate) {
             throw new Exception("Certificate not found");
         }
+        
+        // Mark as deleted
         $updateStmt = $pdo->prepare("UPDATE certificates SET deleted = 1, updated_at = NOW() WHERE id = ?");
         $updateStmt->execute([$certificateId]);
+        
+        // Delete physical file
         if (file_exists($certificate['file_path'])) {
             unlink($certificate['file_path']);
         }
+        
         logAdminActivity('Delete Certificate', "Certificate ID: $certificateId, File: {$certificate['original_filename']}, User ID: {$certificate['user_id']}");
         return true;
     } catch (Exception $e) {
@@ -135,58 +177,74 @@ function deleteCertificate($certificateId) {
         throw new Exception("Error deleting certificate: " . $e->getMessage());
     }
 }
+
 function updateUserStatus($userId, $status) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
+        
+        // Get user details for logging
         $userStmt = $pdo->prepare("SELECT email, firstname, lastname FROM users WHERE id = ?");
         $userStmt->execute([$userId]);
         $user = $userStmt->fetch();
+        
         $stmt = $pdo->prepare("UPDATE users SET status = ?, updated_at = NOW() WHERE id = ?");
         $stmt->execute([$status, $userId]);
         $result = $stmt->rowCount() > 0;
+        
         if ($result && $user) {
             $statusText = $status ? 'Activated' : 'Deactivated';
             logAdminActivity('Update User Status', "User: {$user['email']} ({$user['firstname']} {$user['lastname']}) - Status: $statusText");
         }
+        
         return $result;
     } catch (Exception $e) {
         logAdminActivity('Error', "Failed to update user status for user $userId: " . $e->getMessage());
         throw new Exception("Error updating user status: " . $e->getMessage());
     }
 }
+
 function getUserById($userId) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
         $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         $user = $stmt->fetch();
+        
         if ($user) {
             logAdminActivity('View User Details', "User ID: $userId, Email: {$user['email']}");
         }
+        
         return $user;
     } catch (Exception $e) {
         logAdminActivity('Error', "Failed to fetch user $userId: " . $e->getMessage());
         throw new Exception("Error fetching user: " . $e->getMessage());
     }
 }
+
 function updateUserBalance($userId, $balance) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
+        
+        // Get current balance for logging
         $userStmt = $pdo->prepare("SELECT email, firstname, lastname, balance as old_balance FROM users WHERE id = ?");
         $userStmt->execute([$userId]);
         $user = $userStmt->fetch();
+        
         $stmt = $pdo->prepare("UPDATE users SET balance = ?, updated_at = NOW() WHERE id = ?");
         $stmt->execute([$balance, $userId]);
         $result = $stmt->rowCount() > 0;
+        
         if ($result && $user) {
             logAdminActivity('Update User Balance', "User: {$user['email']} - Balance updated from {$user['old_balance']} to $balance");
         }
+        
         return $result;
     } catch (Exception $e) {
         logAdminActivity('Error', "Failed to update balance for user $userId: " . $e->getMessage());
         throw new Exception("Error updating user balance: " . $e->getMessage());
     }
 }
+
 function getRecentActivity($limit = 50) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -200,17 +258,22 @@ function getRecentActivity($limit = 50) {
         return [];
     }
 }
+
 function searchUsers($query, $page = 1, $perPage = 20) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
         $offset = ($page - 1) * $perPage;
         $searchParam = "%$query%";
         $params = [$searchParam, $searchParam, $searchParam, $searchParam, $searchParam];
+        
+        // Get total count
         $countSql = "SELECT COUNT(*) as total FROM users 
                      WHERE (firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR mobile LIKE ? OR username LIKE ?)";
         $countStmt = $pdo->prepare($countSql);
         $countStmt->execute($params);
         $totalUsers = $countStmt->fetch()['total'];
+        
+        // Get users
         $sql = "SELECT id, firstname, lastname, username, email, mobile, status, ev, sv, balance, created_at, updated_at 
                 FROM users 
                 WHERE (firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR mobile LIKE ? OR username LIKE ?)
@@ -222,7 +285,9 @@ function searchUsers($query, $page = 1, $perPage = 20) {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $users = $stmt->fetchAll();
+        
         logAdminActivity('Search Users', "Query: $query, Results: $totalUsers");
+        
         return [
             'users' => $users,
             'total' => $totalUsers,
@@ -237,6 +302,8 @@ function searchUsers($query, $page = 1, $perPage = 20) {
         throw new Exception("Error searching users: " . $e->getMessage());
     }
 }
+
+// Utility functions
 function formatFileSize($bytes) {
     $units = ['B', 'KB', 'MB', 'GB'];
     $bytes = max($bytes, 0);
@@ -268,19 +335,23 @@ function getFileIcon($mimeType) {
             return '📎';
     }
 }
+
 function formatDate($date) {
     return date('M j, Y \a\t g:i A', strtotime($date));
 }
+
 function getStatusBadge($status) {
     return $status ? 
         '<span class="badge bg-success">Active</span>' : 
         '<span class="badge bg-danger">Inactive</span>';
 }
+
 function getVerificationBadge($verified) {
     return $verified ? 
         '<span class="badge bg-success">✓</span>' : 
         '<span class="badge bg-secondary">✗</span>';
 }
+
 function requireAdminAccess($access) {
     if (!hasAdminAccess($access)) {
         logAdminActivity('Access Denied', "Attempted to access restricted area: $access");
@@ -288,11 +359,12 @@ function requireAdminAccess($access) {
         die("Access denied. You don't have permission to access this resource.");
     }
 }
+
 function getAdminNavigation() {
     $nav = [
         'dashboard' => [
             'title' => 'Dashboard',
-            'url' => 'admin_dashboard.php',
+            'url' => 'index.php',
             'icon' => '🏠',
             'access' => 'dashboard'
         ],
@@ -321,12 +393,15 @@ function getAdminNavigation() {
             'access' => 'settings'
         ]
     ];
+    
+    // Filter navigation based on admin access
     $filteredNav = [];
     foreach ($nav as $key => $item) {
         if (hasAdminAccess($item['access'])) {
             $filteredNav[$key] = $item;
         }
     }
+    
     return $filteredNav;
 }
 ?>

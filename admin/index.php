@@ -1,10 +1,15 @@
 <?php
 require_once 'admin_auth.php';
-protectAdminPage('admin_login');
-if (!checkAdminAuthTimeout()) {
-    header("Location: admin_login");
+require_once 'admin_functions.php';
+if (!isAdminAuthenticated()) {
+    header("Location: admin_login.php");
     exit();
 }
+if (!checkAdminAuthTimeout()) {
+    header("Location: admin_login.php");
+    exit();
+}
+protectAdminPage('admin_login.php');
 logAdminActivity('Accessed Admin Dashboard');
 $currentAdmin = getCurrentAdmin();
 ?>
@@ -22,7 +27,7 @@ $currentAdmin = getCurrentAdmin();
             <div class="header-content">
                 <div>
                     <h1>Admin Dashboard</h1>
-                    <p>Manage users and certificates</p>
+                    <p>Manage users and Purchase Receipts</p>
                 </div>
                 <div class="admin-info">
                     <span>Welcome, <?php echo htmlspecialchars(getAdminDisplayName()); ?></span>
@@ -98,11 +103,11 @@ $currentAdmin = getCurrentAdmin();
                                 <div class="number">${data.stats.active_users}</div>
                             </div>
                             <div class="stat-card">
-                                <h3>Total Certificates</h3>
+                                <h3>Total Purchase Receipts</h3>
                                 <div class="number">${data.stats.total_certificates}</div>
                             </div>
                             <div class="stat-card">
-                                <h3>Users with Certificates</h3>
+                                <h3>Users with Purchase Receipts</h3>
                                 <div class="number">${data.stats.users_with_certificates}</div>
                             </div>
                             <div class="stat-card">

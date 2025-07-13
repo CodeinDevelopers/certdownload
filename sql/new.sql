@@ -2,6 +2,8 @@ CREATE TABLE IF NOT EXISTS certificates (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT UNSIGNED NOT NULL,
     imei VARCHAR(15) NOT NULL,
+    vin_number VARCHAR(17) NULL,
+    serial_number VARCHAR(50) NULL,
     filename VARCHAR(255) NOT NULL,
     original_filename VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,
@@ -15,6 +17,8 @@ CREATE TABLE IF NOT EXISTS certificates (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_user_id (user_id),
     INDEX idx_imei (imei),
+    INDEX idx_vin_number (vin_number),
+    INDEX idx_serial_number (serial_number),
     INDEX idx_deleted (deleted),
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

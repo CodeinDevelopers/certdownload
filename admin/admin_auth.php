@@ -56,13 +56,10 @@ function isAdminAuthenticated() {
            $_SESSION['admin_logged_in'] === true && 
            isset($_SESSION['admin_id']);
 }
-function protectAdminPage($redirectTo = 'admin_login.php') {
-    if (!isAdminAuthenticated()) {
-        $_SESSION['admin_redirect_after_login'] = $_SERVER['REQUEST_URI'];
-        header("Location: $redirectTo");
-        exit();
-    }
-}
+
+// Remove the duplicate protectAdminPage function from here
+// It will be defined in admin_functions.php
+
 function authenticateAdmin($email, $username, $password) {
     try {
         loadEnv();

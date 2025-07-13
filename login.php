@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['failed_attempts'] = 0;
                     $_SESSION['lockout_time'] = null;
                     $success = 'Authentication successful!';
-                    $redirectTo = $_SESSION['redirect_after_login'] ?? 'upload-file.php';
+                    $redirectTo = $_SESSION['redirect_after_login'] ?? 'index.php';
                     unset($_SESSION['redirect_after_login']);
                     
                     header("Location: $redirectTo");

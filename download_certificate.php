@@ -79,8 +79,13 @@ try {
         WHERE id = ?
     ");
     $updateStmt->execute([$newDownloadCount, $certificateId]);
+    $logDir = './logs/';
+    if (!is_dir($logDir)) {
+        mkdir($logDir, 0755, true);
+    }
+
     $logEntry = date('Y-m-d H:i:s') . " - Downloaded: {$certificate['filename']} by User ID: {$currentUser['id']} ({$currentUser['firstname']} {$currentUser['lastname']}) - Mobile: {$currentUser['mobile']} - IMEI: {$certificate['imei']} - Download #{$newDownloadCount}/{$certificate['max_downloads']}\n";
-    file_put_contents('./logs/download_log.txt', $logEntry, FILE_APPEND | LOCK_EX);
+    file_put_contents($logDir . 'download_log.txt', $logEntry, FILE_APPEND | LOCK_EX);
     $downloadFilename = $certificate['original_filename'] ?: $certificate['filename'];
     if (ob_get_level()) {
         ob_end_clean();
