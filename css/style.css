@@ -716,7 +716,7 @@ input[type="file"] {
     align-items: flex-end;
 }
 
-.logout-btn {
+.pro-logout-btn {
     background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
     color: white;
     padding: 12px 24px;
@@ -731,13 +731,13 @@ input[type="file"] {
     gap: 8px;
 }
 
-.logout-btn::after {
+.pro-logout-btn::after {
     content: '→';
     font-size: 1.1rem;
     transition: transform 0.3s ease;
 }
 
-.logout-btn:hover {
+.pro-logout-btn:hover {
     background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
     color: white;
     text-decoration: none;
@@ -745,7 +745,7 @@ input[type="file"] {
     box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
 }
 
-.logout-btn:hover::after {
+.pro-logout-btn:hover::after {
     transform: translateX(3px);
 }
 
@@ -766,26 +766,94 @@ input[type="file"] {
     font-size: 0.8rem;
 }
 
+/* Mobile responsiveness improvements */
 @media (max-width: 768px) {
     .user-info {
+        padding: 20px;
+        gap: 15px;
+    }
+    
+    .user-details {
+        flex: 1;
+        min-width: 0; /* Allows text to wrap properly */
+    }
+    
+    /* Scale down the name text for mobile */
+    .user-details h2 {
+        font-size: 1.4rem;
+        margin-bottom: 8px;
+        line-height: 1.2;
+    }
+    
+    .user-details h2::before {
+        font-size: 1.2rem;
+        margin-right: 8px;
+    }
+    
+    /* Stack contact items vertically on mobile */
+    .user-contact {
         flex-direction: column;
-        gap: 20px;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    
+    .contact-item {
+        padding: 6px 10px;
+        font-size: 0.85rem;
+    }
+    
+    .contact-item span {
+        font-size: 0.85rem;
+    }
+    
+    /* Place logout button and status side by side */
+    .user-actions {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+    }
+    
+    .pro-logout-btn {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+    
+    .status-indicator {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+        white-space: nowrap;
+    }
+}
+
+/* Extra small screens (phones in portrait) */
+@media (max-width: 480px) {
+    .user-info {
+        padding: 15px;
+        flex-direction: column;
         text-align: center;
+        gap: 12px;
+    }
+    
+    .user-details h2 {
+        font-size: 1.2rem;
+        justify-content: center;
     }
     
     .user-contact {
-        flex-direction: column;
-        gap: 10px;
+        gap: 6px;
     }
     
     .user-actions {
-        align-items: center;
+        justify-content: center;
         width: 100%;
     }
     
-    .logout-btn {
-        width: 100%;
+    .pro-logout-btn {
+        flex: 1;
         justify-content: center;
+        max-width: 140px;
     }
 }
 .form-group.disabled {

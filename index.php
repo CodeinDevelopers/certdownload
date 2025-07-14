@@ -52,8 +52,8 @@ try {
         </div>
     </div>
     <div class="user-actions">
-        <div class="status-indicator">Online</div>
-        <a href="logout.php" class="logout-btn">Logout</a>
+        <div class="status-indicator">Activated</div>
+        <a href="logout.php" class="pro-logout-btn">Logout</a>
     </div> </div>
 
         <div class="certificates-list">
