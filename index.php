@@ -31,33 +31,38 @@ try {
             <a href="#" class="logo-text">Document Portal</a>
         </div>
         <a href="logout.php" class="logout-btn">
-            Logout
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" style="display: inline-block; vertical-align: middle;" aria-hidden="true">
-                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                <g id="SVGRepo_iconCarrier">
-                    <path d="M17.4399 14.62L19.9999 12.06L17.4399 9.5" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
-                    <path d="M9.76001 12.0601H19.93" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
-                    <path d="M11.76 20C7.34001 20 3.76001 17 3.76001 4" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
-                </g>
-            </svg>
+            Logout <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" style="display: inline-block; vertical-align: middle;" aria-hidden="true"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M17.4399 14.62L19.9999 12.06L17.4399 9.5" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M9.76001 12.0601H19.93" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M11.76 20C7.34001 20 3.76001 17 3.76001 12C3.76001 7 7.34001 4 11.76 4" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
         </a>
     </header>
     <div class="main-container">
         <div class="header" style="margin-top: 45px;">
         </div>
-        <div class="user-info">
-            <h2>Welcome, <?php echo htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['lastname']); ?>!</h2>
-            <p><strong>Phone:</strong> <?php echo htmlspecialchars($currentUser['mobile']); ?></p>
-            <p><strong>Email:</strong> <?php echo htmlspecialchars($currentUser['email']); ?></p>
+    <div class="user-info">
+    <div class="user-details">
+        <h2><?php echo htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['lastname']); ?></h2>
+        <div class="user-contact">
+            <div class="contact-item">
+                <span class="icon">📱</span>
+                <span><?php echo htmlspecialchars($currentUser['mobile']); ?></span>
+            </div>
+            <div class="contact-item">
+                <span class="icon">✉️</span>
+                <span><?php echo htmlspecialchars($currentUser['email']); ?></span>
+            </div>
         </div>
+    </div>
+    <div class="user-actions">
+        <div class="status-indicator">Online</div>
+        <a href="logout.php" class="logout-btn">Logout</a>
+    </div> </div>
+
         <div class="certificates-list">
             <div class="list-header">My Files</div>
             <div class="search-section">
                 <input
                     type="text"
                     id="searchInput"
-                    placeholder="Search by post title or filename..."
+                    placeholder="Search by Report title or filename..."
                     class="search-input" />
                 <button type="button" id="clearSearch" class="clear-search-btn" style="display: none;">
                     ✕
@@ -70,13 +75,13 @@ try {
         <div class="upload-section">
             <div class="info-note">
                 <strong>Note:</strong> Accepted file formats: PDF, JPG, JPEG, PNG (up to 5MB).<br>
-                <strong>Required:</strong> Select a post to associate with this file.
+                <strong>Required:</strong> Select a Report to associate with this file.
             </div>
             <form id="uploadForm" class="upload-form">
                 <div class="form-group full-width">
-                    <label for="postSelect">Select Post *</label>
+                    <label for="postSelect">Select Report *</label>
                     <select id="postSelect" name="post_id" required>
-                        <option value="">-- Select a post --</option>
+                        <option value="">-- Select a Report --</option>
                         <?php foreach ($userPosts as $post): ?>
                             <option value="<?php echo htmlspecialchars($post['value']); ?>">
                                 <?php echo htmlspecialchars($post['text']); ?>
@@ -85,9 +90,9 @@ try {
                     </select>
                     <div class="file-info">
                         <?php if (empty($userPosts)): ?>
-                            <span style="color: #ff3b30;">No posts available. Please create a post first.</span>
+                            <span style="color: #ff3b30;">No Reports available. Please create a Report first.</span>
                         <?php else: ?>
-                            Choose the post you want to associate this file with
+                            Choose the Report you want to associate this file with
                         <?php endif; ?>
                     </div>
                 </div>
@@ -98,10 +103,10 @@ try {
                         type="text"
                         id="deviceIdentifier"
                         name="device_identifier"
-                        placeholder="Device identifier will be auto-filled from selected post"
+                        placeholder="Device identifier will be auto-filled from selected Report"
                         class="device-identifier-input" />
                     <div class="file-info">
-                        <span id="identifierType">This field will be automatically filled when you select a post</span>
+                        <span id="identifierType">This field will be automatically filled when you select a Report</span>
                     </div>
                 </div>
 
@@ -119,7 +124,7 @@ try {
                     <button type="submit" class="upload-btn" id="uploadBtn" <?php echo empty($userPosts) ? 'disabled' : ''; ?>>
                         <div class="loading" id="uploadLoading"></div>
                         <span id="uploadBtnText">
-                            <?php echo empty($userPosts) ? 'No Posts Available' : 'Upload Purchase Receipt'; ?>
+                            <?php echo empty($userPosts) ? 'No Reports Available' : 'Upload Purchase Receipt'; ?>
                         </span>
                     </button>
                 </div>
@@ -143,9 +148,8 @@ try {
             </div>
         </div>
     </div>
-    <script src="js/certificates.js"></script>
     <script>
-      const uploadForm = document.getElementById('uploadForm');
+const uploadForm = document.getElementById('uploadForm');
 const fileInput = document.getElementById('certificateFile');
 const postSelect = document.getElementById('postSelect');
 const deviceIdentifierInput = document.getElementById('deviceIdentifier');
@@ -166,7 +170,6 @@ let allCertificates = [];
 let certificateToDelete = null;
 const userPosts = <?php echo json_encode($userPosts); ?>;
 
-// Improved Toast Functions
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -174,11 +177,9 @@ function escapeHtml(text) {
 }
 
 function formatMessage(message) {
-    // Remove HTML tags and format the message nicely
     let formatted = message.replace(/<br\s*\/?>/gi, '\n');
-    formatted = formatted.replace(/<[^>]*>/g, ''); // Remove any HTML tags
+    formatted = formatted.replace(/<[^>]*>/g, '');
     
-    // Split into lines and format
     const lines = formatted.split('\n');
     let html = '';
     
@@ -186,7 +187,6 @@ function formatMessage(message) {
         line = line.trim();
         if (line) {
             if (index === 0) {
-                // First line as header if it ends with success/error indicator
                 if (line.includes('successfully') || line.includes('failed') || line.includes('error')) {
                     html += `<div class="toast-header">${escapeHtml(line)}</div>`;
                 } else {
@@ -214,18 +214,14 @@ function showToast(message, type = 'info', duration = 8000) {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     
-    // Format the message first
     toast.innerHTML = formatMessage(message);
     
-    // Create close button
     const closeBtn = document.createElement('button');
     closeBtn.className = 'toast-close';
     closeBtn.innerHTML = '×';
     
-    // Add close button to toast
     toast.appendChild(closeBtn);
     
-    // Position calculation
     const existingToasts = document.querySelectorAll('.toast');
     let topOffset = 20;
     existingToasts.forEach(existingToast => {
@@ -233,29 +229,24 @@ function showToast(message, type = 'info', duration = 8000) {
     });
     toast.style.top = `${topOffset}px`;
     
-    // Add to DOM
     document.body.appendChild(toast);
     
-    // Show toast with animation
     setTimeout(() => {
         toast.classList.add('show');
     }, 100);
     
-    // Auto-hide after duration
     const autoHideTimeout = setTimeout(() => {
         hideToast(toast);
     }, duration);
     
-    // Handle manual close
     closeBtn.addEventListener('click', () => {
         clearTimeout(autoHideTimeout);
         hideToast(toast);
     });
 }
 
-// Helper function for upload success messages
-function showUploadSuccessToast(postTitle, deviceIdentifier, certificatesRemaining) {
-    let message = `File uploaded successfully!\nAssociated with: ${postTitle}`;
+function showUploadSuccessToast(reportTitle, deviceIdentifier, certificatesRemaining) {
+    let message = `File uploaded successfully!\nAssociated with: ${reportTitle}`;
     
     if (deviceIdentifier) {
         message += `\nDevice Registration: ${deviceIdentifier}`;
@@ -269,18 +260,17 @@ function showUploadSuccessToast(postTitle, deviceIdentifier, certificatesRemaini
         }
     }
     
-    showToast(message, 'success', 10000); // 10 seconds for success messages
+    showToast(message, 'success', 10000);
 }
 
-// Device Identifier Extraction
-function extractDeviceIdentifier(postTitle) {
+function extractDeviceIdentifier(reportTitle) {
     const patterns = [
         /IMEI:\s*([A-Za-z0-9]+)/i,
         /VIN:\s*([A-Za-z0-9]+)/i,
         /serial:\s*([A-Za-z0-9]+)/i
     ];
     for (let pattern of patterns) {
-        const match = postTitle.match(pattern);
+        const match = reportTitle.match(pattern);
         if (match && match[1]) {
             return {
                 identifier: match[1],
@@ -291,70 +281,68 @@ function extractDeviceIdentifier(postTitle) {
     return null;
 }
 
-// Post Selection Handler
 postSelect.addEventListener('change', function() {
     const selectedValue = this.value;
     const selectedPost = userPosts.find(post => post.value == selectedValue);
     if (selectedPost) {
-        const postTitle = selectedPost.text;
-        const identifierData = extractDeviceIdentifier(postTitle);
+        const reportTitle = selectedPost.text;
+        const identifierData = extractDeviceIdentifier(reportTitle);
         if (identifierData) {
             deviceIdentifierInput.value = identifierData.identifier;
-            identifierTypeSpan.textContent = `${identifierData.type} extracted from selected post`;
+            identifierTypeSpan.textContent = `${identifierData.type} extracted from selected Report`;
             identifierTypeSpan.style.color = '#34c759';
         } else {
             deviceIdentifierInput.value = '';
-            identifierTypeSpan.textContent = 'No device identifier found in selected post';
+            identifierTypeSpan.textContent = 'No device identifier found in selected Report';
             identifierTypeSpan.style.color = '#ff9500';
         }
     } else {
         deviceIdentifierInput.value = '';
-        identifierTypeSpan.textContent = 'This field will be automatically filled when you select a post';
+        identifierTypeSpan.textContent = 'This field will be automatically filled when you select a Report';
         identifierTypeSpan.style.color = '#666';
     }
 });
 
-// Upload Form Handler
 uploadForm.addEventListener('submit', async function(e) {
     e.preventDefault();
-    console.log('=== Form Submission Started ===');
+    // console.log('=== Form Submission Started ===');
     const file = fileInput.files[0];
     const postId = postSelect.value;
     const deviceIdentifier = deviceIdentifierInput.value.trim();
     
-    console.log('Form submission values:', {
-        postId,
-        deviceIdentifier,
-        file: file ? file.name : 'none'
-    });
+    // console.log('Form submission values:', {
+    //     postId,
+    //     deviceIdentifier,
+    //     file: file ? file.name : 'none'
+    // });
     
     if (!file) {
-        console.error('No file selected');
+        // console.error('No file selected');
         showToast('Please select a file to upload', 'error');
         return;
     }
     
     if (!postId) {
-        console.error('No post selected');
-        showToast('Please select a post to associate with this file', 'error');
+        // console.error('No post selected');
+        showToast('Please select a Report to associate with this file', 'error');
         postSelect.focus();
         return;
     }
     
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
-        console.error('Invalid file type:', file.type);
+        // console.error('Invalid file type:', file.type);
         showToast('Please select a PDF, JPG, JPEG, or PNG file', 'error');
         return;
     }
     
     if (file.size > 5 * 1024 * 1024) {
-        console.error('File too large:', file.size);
+        // console.error('File too large:', file.size);
         showToast('File size exceeds 5MB limit', 'error');
         return;
     }
     
-    console.log('All validations passed, starting upload...');
+    // console.log('All validations passed, starting upload...');
     setLoading(uploadLoading, uploadBtnText, uploadBtn, true, 'Uploading...', 'Upload Purchase Receipt');
     showToast('Starting upload...', 'info');
     
@@ -364,14 +352,14 @@ uploadForm.addEventListener('submit', async function(e) {
         formData.append('post_id', postId);
         formData.append('device_identifier', deviceIdentifier);
         
-        console.log('=== FormData Contents ===');
-        for (let [key, value] of formData.entries()) {
-            if (key === 'file') {
-                console.log(`${key}: File object - ${value.name} (${value.size} bytes)`);
-            } else {
-                console.log(`${key}: "${value}"`);
-            }
-        }
+        // console.log('=== FormData Contents ===');
+        // for (let [key, value] of formData.entries()) {
+        //     if (key === 'file') {
+        //         console.log(`${key}: File object - ${value.name} (${value.size} bytes)`);
+        //     } else {
+        //         console.log(`${key}: "${value}"`);
+        //     }
+        // }
         
         const response = await fetch('upload.php', {
             method: 'POST',
@@ -379,51 +367,52 @@ uploadForm.addEventListener('submit', async function(e) {
         });
         
         const responseText = await response.text();
-        console.log('=== Server Response ===');
-        console.log('Status:', response.status);
-        console.log('Raw response:', responseText);
+        // console.log('=== Server Response ===');
+        // console.log('Status:', response.status);
+        // console.log('Raw response:', responseText);
         
         if (!response.ok) {
-            console.error('HTTP error:', response.status);
+            // console.error('HTTP error:', response.status);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         let result;
         try {
             result = JSON.parse(responseText);
-            console.log('Parsed response:', result);
+            // console.log('Parsed response:', result);
         } catch (parseError) {
-            console.error('JSON parse error:', parseError);
-            console.error('Response text:', responseText);
+            // console.error('JSON parse error:', parseError);
+            // console.error('Response text:', responseText);
             throw new Error('Invalid response format from server');
         }
         
         if (result.success) {
-            console.log('Upload successful!');
+            // console.log('Upload successful!');
             const selectedPost = userPosts.find(post => post.value == postId);
-            const postTitle = selectedPost ? selectedPost.text : 'Unknown Post';
-            showUploadSuccessToast(postTitle, deviceIdentifier, result.certificates_remaining);
+            const reportTitle = selectedPost ? selectedPost.text : 'Unknown Report';
+            showUploadSuccessToast(reportTitle, deviceIdentifier, result.certificates_remaining);
             
             uploadForm.reset();
             deviceIdentifierInput.value = '';
-            identifierTypeSpan.textContent = 'This field will be automatically filled when you select a post';
+            identifierTypeSpan.textContent = 'This field will be automatically filled when you select a Report';
             identifierTypeSpan.style.color = '#666';
             
             setTimeout(() => {
                 loadCertificates();
             }, 1000);
         } else {
-            console.error('Upload failed:', result);
+            // console.error('Upload failed:', result);
             showToast(result.message || 'Upload failed.', 'error');
         }
     } catch (error) {
-        console.error('Upload error:', error);
+        // console.error('Upload error:', error);
         showToast('Upload failed. Please check your connection and try again.', 'error');
     }
     
     setLoading(uploadLoading, uploadBtnText, uploadBtn, false, 'Uploading...', 'Upload Purchase Receipt');
-    console.log('=== Form Submission Ended ===');
+    // console.log('=== Form Submission Ended ===');
 });
+
 searchInput.addEventListener('input', function() {
     const query = this.value.trim();
     if (query) {
@@ -441,6 +430,7 @@ clearSearchBtn.addEventListener('click', function() {
     displayCertificates(allCertificates);
     searchInput.focus();
 });
+
 function showDeleteConfirmation(certificate) {
     certificateToDelete = certificate;
     modalFilename.textContent = certificate.original_filename || certificate.filename;
@@ -453,6 +443,7 @@ function hideDeleteConfirmation() {
     document.body.style.overflow = 'auto';
     certificateToDelete = null;
 }
+
 async function downloadCertificate(certificate) {
     try {
         const remainingDownloads = certificate.max_downloads - certificate.download_count;
@@ -503,10 +494,11 @@ async function downloadCertificate(certificate) {
             loadCertificates();
         }, 1000);
     } catch (error) {
-        console.error('Download error:', error);
+        // console.error('Download error:', error);
         showToast('Download failed: ' + error.message, 'error');
     }
 }
+
 cancelBtn.addEventListener('click', hideDeleteConfirmation);
 confirmModal.addEventListener('click', function(e) {
     if (e.target === confirmModal) {
@@ -545,38 +537,40 @@ confirmBtn.addEventListener('click', async function() {
             throw new Error(result.message || 'Delete failed');
         }
     } catch (error) {
-        console.error('Delete error:', error);
+        // console.error('Delete error:', error);
         showToast('Failed to delete Purchase Receipt. Please try again.', 'error');
     }
     
     confirmBtn.disabled = false;
     confirmBtnText.textContent = 'Delete';
 });
+
 function filterCertificates(query) {
     const filteredCertificates = allCertificates.filter(cert => {
         const filename = (cert.original_filename || cert.filename || '').toLowerCase();
         const deviceIdentifier = (cert.device_identifier || '').toLowerCase();
         const searchQuery = query.toLowerCase();
-        let postTitle = '';
+        let reportTitle = '';
         
         if (cert.post_title && cert.post_title.trim()) {
-            postTitle = cert.post_title.toLowerCase();
+            reportTitle = cert.post_title.toLowerCase();
         } else if (cert.post_id) {
             const matchedPost = userPosts.find(post => post.value == cert.post_id);
             if (matchedPost) {
-                postTitle = matchedPost.text.toLowerCase();
+                reportTitle = matchedPost.text.toLowerCase();
             } else {
-                postTitle = `post id: ${cert.post_id}`.toLowerCase();
+                reportTitle = `Report id: ${cert.post_id}`.toLowerCase();
             }
         }
         
         return filename.includes(searchQuery) ||
-            postTitle.includes(searchQuery) ||
+            reportTitle.includes(searchQuery) ||
             deviceIdentifier.includes(searchQuery);
     });
     
     displayCertificates(filteredCertificates);
 }
+
 function displayCertificates(certificates) {
     if (certificates.length === 0) {
         const query = searchInput.value.trim();
@@ -613,6 +607,7 @@ function displayCertificates(certificates) {
         }
     }
 }
+
 async function loadCertificates() {
     try {
         certificatesList.innerHTML = '<div class="empty-state">Loading files...</div>';
@@ -628,14 +623,14 @@ async function loadCertificates() {
         }
         
         const data = await response.json();
-        console.log('Certificates API response:', data);
+        // console.log('Certificates API response:', data);
         
         if (!data.success) {
             throw new Error(data.message || 'Failed to load certificates');
         }
         
         allCertificates = data.certificates || [];
-        console.log('Loaded certificates:', allCertificates);
+        // console.log('Loaded certificates:', allCertificates);
         
         const query = searchInput.value.trim();
         if (query) {
@@ -644,11 +639,12 @@ async function loadCertificates() {
             displayCertificates(allCertificates);
         }
     } catch (error) {
-        console.error('Error loading files:', error);
+        // console.error('Error loading files:', error);
         certificatesList.innerHTML = '<div class="empty-state">Unable to load files. Please refresh the page.</div>';
         showToast('Unable to load files. Please refresh the page.', 'error');
     }
 }
+
 function generateCertificateHTML(certificates) {
     return certificates.map(cert => {
         const remainingDownloads = cert.max_downloads - cert.download_count;
@@ -657,24 +653,24 @@ function generateCertificateHTML(certificates) {
         const progressPercentage = Math.round((cert.download_count / cert.max_downloads) * 100);
         const canDownload = remainingDownloads > 0;
         
-        console.log('Certificate data:', {
-            id: cert.id,
-            post_id: cert.post_id,
-            post_title: cert.post_title,
-            filename: cert.original_filename || cert.filename
-        });
+        // console.log('Certificate data:', {
+        //     id: cert.id,
+        //     post_id: cert.post_id,
+        //     post_title: cert.post_title,
+        //     filename: cert.original_filename || cert.filename
+        // });
         
-        let postTitle = 'Unknown Post';
+        let reportTitle = 'Unknown Report';
         if (cert.post_title && cert.post_title.trim()) {
-            postTitle = cert.post_title;
+            reportTitle = cert.post_title;
         } else if (cert.post_id) {
             const matchedPost = userPosts.find(post => post.value == cert.post_id);
             if (matchedPost) {
-                postTitle = matchedPost.text;
-                console.log(`Found post title from userPosts: ${postTitle}`);
+                reportTitle = matchedPost.text;
+                // console.log(`Found post title from userPosts: ${reportTitle}`);
             } else {
-                postTitle = `Post ID: ${cert.post_id}`;
-                console.warn(`No post title found for post ID: ${cert.post_id}`);
+                reportTitle = `Report ID: ${cert.post_id}`;
+                // console.warn(`No post title found for post ID: ${cert.post_id}`);
             }
         }
         
@@ -684,7 +680,7 @@ function generateCertificateHTML(certificates) {
                     <div class="cert-info">
                         <div class="cert-name">${escapeHtml(cert.original_filename || cert.filename)}</div>
                         <div class="cert-phone">Uploaded: ${new Date(cert.created_at).toLocaleDateString()}</div>
-                        <div class="cert-identifiers">Associated Post: ${escapeHtml(postTitle)}</div>
+                        <div class="cert-identifiers">Associated Report: ${escapeHtml(reportTitle)}</div>
                         ${cert.device_identifier ? `<div class="cert-identifiers">Device ID: ${escapeHtml(cert.device_identifier)}</div>` : ''}
                     </div>
                 </div>
@@ -710,26 +706,29 @@ function generateCertificateHTML(certificates) {
                 </div>
                 <div class="cert-actions">
                     <button class="download-btn" ${!canDownload ? 'disabled' : ''} onclick="downloadCertificate(${JSON.stringify(cert).replace(/"/g, '&quot;')})">
-                        ${canDownload ? 'Download Purchase Receipt' : 'Download Limit Exceeded'}
+                        ${canDownload ? 'Download File' : 'Download Limit Exceeded'}
                     </button>
                     <button class="delete-btn" onclick="showDeleteConfirmation(${JSON.stringify(cert).replace(/"/g, '&quot;')})">
-                        Delete Purchase Receipt
+                        Delete File
                     </button>
                 </div>
             </div>
         `;
     }).join('');
 }
+
 function showMessage(target, text, type) {
     showToast(text, type);
 }
 
 function clearMessage(target) {}
+
 function setLoading(loadingEl, textEl, btnEl, isLoading, loadingText, defaultText) {
     if (loadingEl) loadingEl.style.display = isLoading ? 'inline-block' : 'none';
     if (btnEl) btnEl.disabled = isLoading;
     if (textEl) textEl.textContent = isLoading ? loadingText : defaultText;
 }
+
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && confirmModal.classList.contains('show')) {
         hideDeleteConfirmation();
@@ -739,7 +738,9 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('DOMContentLoaded', function() {
     loadCertificates();
 });
+
 setInterval(loadCertificates, 30000);
+
 document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
         loadCertificates();
