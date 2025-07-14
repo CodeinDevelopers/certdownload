@@ -232,7 +232,6 @@ try {
             $search = $_GET['search'] ?? '';
             $result = getUsers(1, 10000, $search);
             $users = $result['users'];
-            
             if ($format === 'csv') {
                 header('Content-Type: text/csv');
                 header('Content-Disposition: attachment; filename="users_export_' . date('Y-m-d_H-i-s') . '.csv"');

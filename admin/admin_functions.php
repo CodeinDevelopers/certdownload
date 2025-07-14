@@ -1,10 +1,9 @@
 <?php
 require_once 'admin_auth.php';
-
 function isAdmin() {
     return isAdminAuthenticated();
 }
-function protectAdminPageWithTimeout($redirectTo = 'admin_login.php') {
+function protectAdminPageWithTimeout($redirectTo = 'admin_login') {
     if (!isAdminAuthenticated()) {
         $_SESSION['admin_redirect_after_login'] = $_SERVER['REQUEST_URI'];
         header("Location: $redirectTo");
@@ -15,26 +14,36 @@ function protectAdminPageWithTimeout($redirectTo = 'admin_login.php') {
         exit();
     }
 }
-
 function getUsers($page = 1, $perPage = 20, $search = '') {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
         $offset = ($page - 1) * $perPage;
-        
         $whereClause = '';
         $params = [];
         if (!empty($search)) {
-            $whereClause = "WHERE (firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR mobile LIKE ?)";
+            $whereClause = "WHERE (u.firstname LIKE ? OR u.lastname LIKE ? OR u.email LIKE ? OR u.mobile LIKE ?)";
             $searchParam = "%$search%";
             $params = [$searchParam, $searchParam, $searchParam, $searchParam];
         }
-        $countSql = "SELECT COUNT(*) as total FROM users $whereClause";
+        $countSql = "SELECT COUNT(*) as total FROM users u $whereClause";
         $countStmt = $pdo->prepare($countSql);
         $countStmt->execute($params);
         $totalUsers = $countStmt->fetch()['total'];
-        $sql = "SELECT id, firstname, lastname, username, email, mobile, status, ev, sv, balance, created_at, updated_at 
-                FROM users $whereClause 
-                ORDER BY created_at DESC 
+        $sql = "SELECT u.id, u.firstname, u.lastname, u.username, u.email, u.mobile, 
+                       u.status, u.ev, u.sv, u.balance, u.created_at, u.updated_at,
+                       COALESCE(c.file_count, 0) as file_count,
+                       COALESCE(c.total_file_size, 0) as total_file_size
+                FROM users u
+                LEFT JOIN (
+                    SELECT user_id, 
+                           COUNT(*) as file_count,
+                           SUM(file_size) as total_file_size
+                    FROM certificates 
+                    WHERE deleted = 0 
+                    GROUP BY user_id
+                ) c ON u.id = c.user_id
+                $whereClause 
+                ORDER BY u.created_at DESC 
                 LIMIT ? OFFSET ?";
         $params[] = $perPage;
         $params[] = $offset;
@@ -54,7 +63,6 @@ function getUsers($page = 1, $perPage = 20, $search = '') {
         throw new Exception("Error fetching users: " . $e->getMessage());
     }
 }
-
 function getUserCertificates($userId) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -74,7 +82,6 @@ function getUserCertificates($userId) {
         throw new Exception("Error fetching certificates: " . $e->getMessage());
     }
 }
-
 function getUserStats() {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -114,7 +121,6 @@ function getUserStats() {
         throw new Exception("Error fetching stats: " . $e->getMessage());
     }
 }
-
 function deleteCertificate($certificateId) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -136,7 +142,6 @@ function deleteCertificate($certificateId) {
         throw new Exception("Error deleting certificate: " . $e->getMessage());
     }
 }
-
 function updateUserStatus($userId, $status) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -156,7 +161,6 @@ function updateUserStatus($userId, $status) {
         throw new Exception("Error updating user status: " . $e->getMessage());
     }
 }
-
 function getUserById($userId) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -172,11 +176,9 @@ function getUserById($userId) {
         throw new Exception("Error fetching user: " . $e->getMessage());
     }
 }
-
 function updateUserBalance($userId, $balance) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
-    
         $userStmt = $pdo->prepare("SELECT email, firstname, lastname, balance as old_balance FROM users WHERE id = ?");
         $userStmt->execute([$userId]);
         $user = $userStmt->fetch();
@@ -193,7 +195,6 @@ function updateUserBalance($userId, $balance) {
         throw new Exception("Error updating user balance: " . $e->getMessage());
     }
 }
-
 function getRecentActivity($limit = 50) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -207,7 +208,6 @@ function getRecentActivity($limit = 50) {
         return [];
     }
 }
-
 function searchUsers($query, $page = 1, $perPage = 20) {
     try {
         $pdo = AdminDatabaseConfig::getConnection();
@@ -219,10 +219,21 @@ function searchUsers($query, $page = 1, $perPage = 20) {
         $countStmt = $pdo->prepare($countSql);
         $countStmt->execute($params);
         $totalUsers = $countStmt->fetch()['total'];
-        $sql = "SELECT id, firstname, lastname, username, email, mobile, status, ev, sv, balance, created_at, updated_at 
-                FROM users 
-                WHERE (firstname LIKE ? OR lastname LIKE ? OR email LIKE ? OR mobile LIKE ? OR username LIKE ?)
-                ORDER BY created_at DESC 
+        $sql = "SELECT u.id, u.firstname, u.lastname, u.username, u.email, u.mobile, 
+                       u.status, u.ev, u.sv, u.balance, u.created_at, u.updated_at,
+                       COALESCE(c.file_count, 0) as file_count,
+                       COALESCE(c.total_file_size, 0) as total_file_size
+                FROM users u
+                LEFT JOIN (
+                    SELECT user_id, 
+                           COUNT(*) as file_count,
+                           SUM(file_size) as total_file_size
+                    FROM certificates 
+                    WHERE deleted = 0 
+                    GROUP BY user_id
+                ) c ON u.id = c.user_id
+                WHERE (u.firstname LIKE ? OR u.lastname LIKE ? OR u.email LIKE ? OR u.mobile LIKE ? OR u.username LIKE ?)
+                ORDER BY u.created_at DESC 
                 LIMIT ? OFFSET ?";
         $params[] = $perPage;
         $params[] = $offset;
@@ -243,7 +254,6 @@ function searchUsers($query, $page = 1, $perPage = 20) {
         throw new Exception("Error searching users: " . $e->getMessage());
     }
 }
-
 function formatFileSize($bytes) {
     $units = ['B', 'KB', 'MB', 'GB'];
     $bytes = max($bytes, 0);
@@ -252,7 +262,6 @@ function formatFileSize($bytes) {
     $bytes /= pow(1024, $pow);
     return round($bytes, 2) . ' ' . $units[$pow];
 }
-
 function getFileIcon($mimeType) {
     switch ($mimeType) {
         case 'application/pdf':
@@ -275,23 +284,19 @@ function getFileIcon($mimeType) {
             return '📎';
     }
 }
-
 function formatDate($date) {
     return date('M j, Y \a\t g:i A', strtotime($date));
 }
-
 function getStatusBadge($status) {
     return $status ? 
         '<span class="badge bg-success">Active</span>' : 
         '<span class="badge bg-danger">Inactive</span>';
 }
-
 function getVerificationBadge($verified) {
     return $verified ? 
         '<span class="badge bg-success">✓</span>' : 
         '<span class="badge bg-secondary">✗</span>';
 }
-
 function requireAdminAccess($access) {
     if (!hasAdminAccess($access)) {
         logAdminActivity('Access Denied', "Attempted to access restricted area: $access");
@@ -299,7 +304,6 @@ function requireAdminAccess($access) {
         die("Access denied. You don't have permission to access this resource.");
     }
 }
-
 function getAdminNavigation() {
     $nav = [
         'dashboard' => [

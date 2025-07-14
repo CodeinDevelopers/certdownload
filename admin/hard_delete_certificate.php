@@ -69,9 +69,7 @@ try {
         'user_name' => $currentUser['firstname'] . ' ' . $currentUser['lastname'],
         'user_mobile' => $currentUser['mobile']
     ];
-
     $pdo->beginTransaction();
-    
     try {
         $deleteStmt = $pdo->prepare("DELETE FROM certificates WHERE id = ? AND user_id = ?");
         $deleteStmt->execute([$certificateId, $currentUser['id']]);
@@ -81,7 +79,6 @@ try {
         $verifyStmt = $pdo->prepare("SELECT COUNT(*) as count FROM certificates WHERE id = ?");
         $verifyStmt->execute([$certificateId]);
         $verifyResult = $verifyStmt->fetch(PDO::FETCH_ASSOC);
-        
         if ($verifyResult['count'] > 0) {
             throw new Exception('Database deletion verification failed - record still exists');
         }

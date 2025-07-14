@@ -1,6 +1,5 @@
 <?php
 require_once 'admin_auth.php';
-
 $error = '';
 $success = '';
 if (!isset($_SESSION['admin_failed_attempts'])) {
@@ -9,10 +8,9 @@ if (!isset($_SESSION['admin_failed_attempts'])) {
 if (!isset($_SESSION['admin_lockout_time'])) {
     $_SESSION['admin_lockout_time'] = null;
 }
-
 function isAdminLockedOut() {
     if ($_SESSION['admin_failed_attempts'] >= 3 && $_SESSION['admin_lockout_time'] !== null) {
-        $lockoutDuration = 15 * 60; // 15 minutes lockout for admin
+        $lockoutDuration = 15 * 60;
         $currentTime = time();
         if (($currentTime - $_SESSION['admin_lockout_time']) >= $lockoutDuration) {
             $_SESSION['admin_failed_attempts'] = 0;
@@ -23,7 +21,6 @@ function isAdminLockedOut() {
     }
     return false;
 }
-
 function getAdminRemainingLockoutTime() {
     if ($_SESSION['admin_lockout_time'] !== null) {
         $lockoutDuration = 15 * 60;
@@ -37,17 +34,14 @@ function getAdminRemainingLockoutTime() {
     }
     return "0:00";
 }
-
 $currentlyLockedOut = isAdminLockedOut();
 $remainingTime = $currentlyLockedOut ? getAdminRemainingLockoutTime() : null;
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($currentlyLockedOut) {
         $error = "Admin account locked due to multiple failed attempts. Please try again in $remainingTime.";
     } else {
         $email = trim($_POST['email'] ?? '');
         $password = trim($_POST['password'] ?? '');
-        
         if (empty($email) || empty($password)) {
             $error = 'Please enter email and password.';
         } else {
@@ -58,10 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['admin_failed_attempts'] = 0;
                     $_SESSION['admin_lockout_time'] = null;
                     $success = 'Admin authentication successful!';
-                    
                     $redirectTo = $_SESSION['admin_redirect_after_login'] ?? 'index.php';
                     unset($_SESSION['admin_redirect_after_login']);
-                    
                     header("Location: $redirectTo");
                     exit();
                 } else {
@@ -103,7 +95,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -115,7 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #212529;
             padding: 20px;
         }
-
         .admin-badge {
             background: linear-gradient(135deg, #212529 0%, #6c757d 100%);
             color: white;
@@ -128,7 +118,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             box-shadow: 0 4px 15px rgba(33, 37, 41, 0.3);
             letter-spacing: 0.5px;
         }
-
         .login-container {
             backdrop-filter: blur(10px);
             border: 1px solid rgba(0, 0, 0, 0.1);
@@ -137,27 +126,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             width: 100%;
             max-width: 400px;
         }
-
         .logo-section {
             text-align: center;
         }
-
         .logo-section img {
             height: 70px;
             border-radius: 12px;
             transition: transform 0.3s ease;
             padding: 12px;
         }
-
         .logo-section img:hover {
             transform: scale(1.05);
         }
-
         .login-header {
             text-align: center;
             margin-bottom: 32px;
         }
-
         .login-header h2 {
             font-size: 32px;
             font-weight: 600;
@@ -167,17 +151,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-
         .login-header p {
             color: #6c757d;
             font-size: 16px;
             margin: 0;
         }
-
         .form-group {
             margin-bottom: 24px;
         }
-
         label {
             display: block;
             font-size: 14px;
@@ -185,7 +166,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-bottom: 8px;
             color: #212529;
         }
-
         input[type="text"], 
         input[type="email"],
         input[type="password"] {
@@ -199,7 +179,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transition: all 0.2s ease;
             font-family: inherit;
         }
-
         input[type="text"]:focus, 
         input[type="email"]:focus,
         input[type="password"]:focus {
@@ -207,13 +186,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-color: #0070f3;
             box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
         }
-
         input[type="text"]::placeholder,
         input[type="email"]::placeholder,
         input[type="password"]::placeholder {
             color: #6c757d;
         }
-
         input[type="text"]:disabled, 
         input[type="email"]:disabled,
         input[type="password"]:disabled {
@@ -222,7 +199,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             cursor: not-allowed;
             opacity: 0.7;
         }
-
         .btn {
             width: 100%;
             padding: 12px 24px;
@@ -238,23 +214,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             overflow: hidden;
             font-family: inherit;
         }
-
         .btn:hover:not(:disabled) {
             transform: translateY(-1px);
             box-shadow: 0 10px 25px rgba(52, 199, 89, 0.3);
         }
-
         .btn:active:not(:disabled) {
             transform: translateY(0);
         }
-
         .btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
         }
-
         .error {
             background: rgba(255, 59, 48, 0.1);
             border: 1px solid rgba(255, 59, 48, 0.3);
@@ -276,7 +248,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 14px;
             border-left: 4px solid #34c759;
         }
-
         .lockout-info {
             background: rgba(255, 193, 7, 0.1);
             border: 1px solid rgba(255, 193, 7, 0.3);
@@ -288,14 +259,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             text-align: center;
             font-size: 14px;
         }
-
         .lockout-timer {
             font-size: 18px;
             font-weight: 600;
             color: #ff3b30;
             margin-top: 8px;
         }
-
         .attempts-info {
             font-size: 14px;
             color: #6c757d;
@@ -305,7 +274,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 8px 12px;
             border-radius: 6px;
         }
-
         .security-note {
             font-size: 12px;
             color: #6c757d;
@@ -316,8 +284,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: 8px;
             border: 1px solid rgba(108, 117, 125, 0.2);
         }
-
-        /* Loading animation */
         .loading {
             display: inline-block;
             width: 20px;
@@ -328,31 +294,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             animation: spin 1s linear infinite;
             margin-right: 8px;
         }
-
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        /* Responsive Design */
         @media (max-width: 480px) {
             .login-container {
                 padding: 24px;
             }
-            
             .logo-section img {
-                max-width: 120px;
+                 width: auto;
                 padding: 8px;
             }
-            
             .login-header h2 {
                 font-size: 24px;
             }
-            
             .login-header p {
                 font-size: 14px;
             }
-            
             input[type="text"], 
             input[type="email"],
             input[type="password"] {
@@ -374,24 +333,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $remaining = $lockoutDuration - $elapsed;
             echo max(0, $remaining);
         ?>;
-        
         function updateTimer() {
             if (remainingSeconds <= 0) {
                 location.reload();
                 return;
             }
-            
             const minutes = Math.floor(remainingSeconds / 60);
             const seconds = remainingSeconds % 60;
             const timerElement = document.getElementById('lockout-timer');
-            
             if (timerElement) {
                 timerElement.textContent = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
             }
-            
             remainingSeconds--;
         }
-        
         setInterval(updateTimer, 1000);
     </script>
     <?php endif; ?>
@@ -400,13 +354,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="logo-section">
         <img src="./../images/logo.png" alt="Company Logo" id="logo">
     </div>
-    
     <div class="login-container">
         <div class="login-header">
             <div class="admin-badge">ADMIN ACCESS</div>
             <p>Please enter your admin credentials to continue</p>
         </div>
-        
         <?php if ($currentlyLockedOut): ?>
             <div class="lockout-info">
                 <strong>Account Locked</strong><br>
@@ -414,21 +366,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span class="lockout-timer" id="lockout-timer"><?php echo $remainingTime; ?></span>
             </div>
         <?php endif; ?>
-        
         <?php if ($error): ?>
             <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
-        
         <?php if ($success): ?>
             <div class="success"><?php echo htmlspecialchars($success); ?></div>
         <?php endif; ?>
-        
         <?php if (!$currentlyLockedOut && $_SESSION['admin_failed_attempts'] > 0): ?>
             <div class="attempts-info">
                 Failed attempts: <?php echo $_SESSION['admin_failed_attempts']; ?>/3
             </div>
         <?php endif; ?>
-        
         <form method="POST" action="">
             <div class="form-group">
                 <label for="email">Email Address:</label>
@@ -441,7 +389,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
                        <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
             </div>
-            
             <div class="form-group">
                 <label for="password">Password:</label>
                 <input type="password" 
@@ -451,7 +398,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        placeholder="Enter your admin password"
                        <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>
             </div>
-            
             <button type="submit" 
                     class="btn" 
                     <?php echo $currentlyLockedOut ? 'disabled' : ''; ?>>

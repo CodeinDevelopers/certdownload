@@ -2,14 +2,14 @@
 require_once 'admin_auth.php';
 require_once 'admin_functions.php';
 if (!isAdminAuthenticated()) {
-    header("Location: admin_login.php");
+    header("Location: admin_login");
     exit();
 }
 if (!checkAdminAuthTimeout()) {
-    header("Location: admin_login.php");
+    header("Location: admin_login");
     exit();
 }
-protectAdminPage('admin_login.php');
+protectAdminPage('admin_login');
 logAdminActivity('Accessed Admin Dashboard');
 $currentAdmin = getCurrentAdmin();
 ?>
@@ -35,12 +35,9 @@ $currentAdmin = getCurrentAdmin();
                 </div>
             </div>
         </div>
-        
         <div class="stats-grid" id="stats-grid">
         </div>
-        
        <div class="search-bar-wrapper"> <div class="search-bar" id="searchBar"> <div class="search-container"> <input type="text" id="searchInput" placeholder="Search users by name, email, or mobile..." onkeyup="searchUsers()"> </div> </div> <div class="search-bar-placeholder" id="searchBarPlaceholder"></div> </div>
-        
         <div class="users-table">
             <table id="usersTable">
                 <thead>
@@ -51,7 +48,8 @@ $currentAdmin = getCurrentAdmin();
                         <th>Mobile</th>
                         <th>Status</th>
                         <th>Email Verified</th>
-                        <th>SMS Verified</th>
+                        <th>Files Count</th>
+                        <th>Total File Size</th>
                         <th>Balance</th>
                         <th>Joined</th>
                         <th>Actions</th>
@@ -60,12 +58,10 @@ $currentAdmin = getCurrentAdmin();
                 <tbody id="usersTableBody">
                 </tbody>
             </table>
-            
             <div class="pagination" id="pagination">
             </div>
         </div>
     </div>
-    
     <div id="filesModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
@@ -74,13 +70,11 @@ $currentAdmin = getCurrentAdmin();
             </div>
         </div>
     </div>
-
     <script>
 let currentPage = 1;
 let searchTerm = '';
 let searchBarOriginalPosition = 0;
 let isSearchBarSticky = false;
-
 document.addEventListener('DOMContentLoaded', function() {
     loadStats();
     loadUsers();
@@ -91,7 +85,6 @@ document.addEventListener('DOMContentLoaded', function() {
         searchBarOriginalPosition = searchBar.offsetTop;
     }
 });
-
 function setupStickySearchBar() {
     const searchBar = document.getElementById('searchBar');
     const searchBarPlaceholder = document.getElementById('searchBarPlaceholder');
@@ -99,7 +92,6 @@ function setupStickySearchBar() {
     setTimeout(() => {
         searchBarOriginalPosition = searchBar.offsetTop;
     }, 100);
-    
     window.addEventListener('scroll', function() {
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
         if (scrollTop > searchBarOriginalPosition && !isSearchBarSticky) {
@@ -117,7 +109,6 @@ function setupStickySearchBar() {
         }
     });
 }
-
 function loadStats() {
     fetch('admin_api.php?action=get_stats')
         .then(response => response.json())
@@ -146,19 +137,17 @@ function loadStats() {
                         <div class="number">${data.stats.email_verified}</div>
                     </div>
                     <div class="stat-card">
-                        <h3>SMS Verified</h3>
-                        <div class="number">${data.stats.sms_verified}</div>
+                        <h3>Recent Registrations</h3>
+                        <div class="number">${data.stats.recent_registrations}</div>
                     </div>
                 `;
             }
         })
         .catch(error => console.error('Error loading stats:', error));
 }
-
 function loadUsers(page = 1) {
     currentPage = page;
     const url = `admin_api.php?action=get_users&page=${page}&search=${encodeURIComponent(searchTerm)}`;
-    
     fetch(url)
         .then(response => response.json())
         .then(data => {
@@ -176,10 +165,19 @@ function formatNairaCurrency(amount) {
         maximumFractionDigits: 2
     });
 }
+function formatFileSize(bytes) {
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let size = parseFloat(bytes) || 0;
+    let unitIndex = 0;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex++;
+    }
+    return Math.round(size * 100) / 100 + ' ' + units[unitIndex];
+}
 function displayUsers(users) {
     const tbody = document.getElementById('usersTableBody');
     tbody.innerHTML = '';
-    
     users.forEach(user => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -195,8 +193,11 @@ function displayUsers(users) {
             <td class="${user.ev == 1 ? 'verified' : 'not-verified'}">
                 ${user.ev == 1 ? '✓' : '✗'}
             </td>
-            <td class="${user.sv == 1 ? 'verified' : 'not-verified'}">
-                ${user.sv == 1 ? '✓' : '✗'}
+            <td class="files-count">
+                <span class="file-count-badge">${user.file_count}</span>
+            </td>
+            <td class="file-size">
+                <span class="file-size-badge">${formatFileSize(user.total_file_size)}</span>
             </td>
             <td>₦${parseFloat(user.balance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
             <td>${new Date(user.created_at).toLocaleDateString()}</td>
@@ -209,17 +210,13 @@ function displayUsers(users) {
         tbody.appendChild(row);
     });
 }
-
 function displayPagination(pagination) {
     const paginationDiv = document.getElementById('pagination');
     paginationDiv.innerHTML = '';
-    
     if (pagination.totalPages <= 1) return;
-    
     if (pagination.page > 1) {
         paginationDiv.innerHTML += `<a href="#" onclick="loadUsers(${pagination.page - 1})">&laquo; Previous</a>`;
     }
-    
     for (let i = 1; i <= pagination.totalPages; i++) {
         if (i === pagination.page) {
             paginationDiv.innerHTML += `<span class="current">${i}</span>`;
@@ -227,7 +224,6 @@ function displayPagination(pagination) {
             paginationDiv.innerHTML += `<a href="#" onclick="loadUsers(${i})">${i}</a>`;
         }
     }
-    
     if (pagination.page < pagination.totalPages) {
         paginationDiv.innerHTML += `<a href="#" onclick="loadUsers(${pagination.page + 1})">Next &raquo;</a>`;
     }
@@ -238,17 +234,13 @@ function searchUsers() {
     searchTerm = searchInput.value.trim();
     loadUsers(1);
 }
-
 function viewUserFiles(userId, userName) {
     const modal = document.getElementById('filesModal');
     const modalTitle = document.getElementById('modalTitle');
     const filesContainer = document.getElementById('filesContainer');
-    
     modalTitle.textContent = `Files for ${userName}`;
     filesContainer.innerHTML = '<p>Loading files...</p>';
-    
     modal.style.display = 'block';
-    
     fetch(`admin_api.php?action=get_user_files&user_id=${userId}`)
         .then(response => response.json())
         .then(data => {
@@ -263,17 +255,13 @@ function viewUserFiles(userId, userName) {
             filesContainer.innerHTML = '<p class="no-files">Error loading files</p>';
         });
 }
-
 function displayFiles(files) {
     const filesContainer = document.getElementById('filesContainer');
-    
     if (files.length === 0) {
         filesContainer.innerHTML = '<p class="no-files">No files uploaded by this user</p>';
         return;
     }
-    
     filesContainer.innerHTML = '';
-    
     files.forEach(file => {
         const fileDiv = document.createElement('div');
         fileDiv.className = 'file-item';
@@ -298,7 +286,6 @@ function displayFiles(files) {
         filesContainer.appendChild(fileDiv);
     });
 }
-
 function getFileIcon(mimeType) {
     switch (mimeType) {
         case 'application/pdf':
@@ -311,24 +298,9 @@ function getFileIcon(mimeType) {
             return '📎';
     }
 }
-
-function formatFileSize(bytes) {
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let size = bytes;
-    let unitIndex = 0;
-    
-    while (size >= 1024 && unitIndex < units.length - 1) {
-        size /= 1024;
-        unitIndex++;
-    }
-    
-    return Math.round(size * 100) / 100 + ' ' + units[unitIndex];
-}
-
 function downloadFile(filename) {
     window.open(`admin_api.php?action=download_file&filename=${filename}`, '_blank');
 }
-
 function viewFile(filename, mimeType) {
     if (mimeType.startsWith('image/')) {
         showImageModal(filename);
@@ -336,7 +308,6 @@ function viewFile(filename, mimeType) {
         downloadFile(filename);
     }
 }
-
 function showImageModal(filename) {
     const modal = document.createElement('div');
     modal.className = 'modal';
@@ -351,7 +322,6 @@ function showImageModal(filename) {
     `;
     document.body.appendChild(modal);
     modal.style.display = 'block';
-    
     modal.onclick = function(event) {
         if (event.target === modal) {
             modal.remove();
@@ -377,20 +347,19 @@ function deleteFile(fileId) {
                 const userName = titleText.replace('Files for ', '');
                 const rows = document.querySelectorAll('#usersTableBody tr');
                 let userId = null;
-                
                 rows.forEach(row => {
                     const nameCell = row.cells[1].textContent;
                     if (nameCell === userName) {
                         userId = row.cells[0].textContent;
                     }
                 });
-                
                 if (userId) {
                     viewUserFiles(userId, userName);
                 } else {
                     modal.style.display = 'none';
                 }
                 loadStats();
+                loadUsers(currentPage); 
             } else {
                 alert('Error deleting file: ' + data.message);
             }
@@ -401,15 +370,12 @@ function deleteFile(fileId) {
         });
     }
 }
-
 function setupModal() {
     const modal = document.getElementById('filesModal');
     const span = document.getElementsByClassName('close')[0];
-    
     span.onclick = function() {
         modal.style.display = 'none';
     }
-    
     window.onclick = function(event) {
         if (event.target === modal) {
             modal.style.display = 'none';

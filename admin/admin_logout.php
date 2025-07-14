@@ -4,6 +4,6 @@ if (isAdminAuthenticated()) {
     logAdminActivity('Admin Logout');
 }
 adminLogout();
-header("Location: admin_login.php");
+header("Location: admin_login");
 exit();
 ?>

@@ -42,8 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $mobile = trim($_POST['mobile'] ?? '');
         $password = trim($_POST['password'] ?? '');
-        
-        // Validate mobile number format
         if (empty($mobile) || empty($password)) {
             $error = 'Please enter both mobile number and password.';
         } elseif (!preg_match('/^\d{11}$/', $mobile)) {
@@ -51,12 +49,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $user = authenticateUser($mobile, $password);
-                
                 if ($user) {
                     $_SESSION['failed_attempts'] = 0;
                     $_SESSION['lockout_time'] = null;
                     $success = 'Authentication successful!';
-                    $redirectTo = $_SESSION['redirect_after_login'] ?? 'index.php';
+                    $redirectTo = $_SESSION['redirect_after_login'] ?? 'index';
                     unset($_SESSION['redirect_after_login']);
                     
                     header("Location: $redirectTo");
@@ -225,16 +222,13 @@ input[type="password"]:disabled {
     border-radius: 4px;
     transition: color 0.2s ease;
 }
-
 .password-toggle:hover {
     color: #212529;
 }
-
 .password-toggle:focus {
     outline: none;
     color: #0070f3;
 }
-
 .btn {
     width: 100%;
     padding: 12px 24px;
@@ -250,23 +244,19 @@ input[type="password"]:disabled {
     overflow: hidden;
     font-family: inherit;
 }
-
 .btn:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 10px 25px rgba(52, 199, 89, 0.3);
 }
-
 .btn:active:not(:disabled) {
     transform: translateY(0);
 }
-
 .btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
 }
-
 .error {
     background: rgba(255, 59, 48, 0.1);
     border: 1px solid rgba(255, 59, 48, 0.3);
@@ -396,7 +386,7 @@ input[type="password"]:disabled {
     }
     
     .logo-section img {
-        max-width: 120px;
+        width: auto;
         padding: 8px;
     }
     

@@ -9,7 +9,7 @@ body {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     min-height: 100vh;
     color: #212529;
-    padding: 20px;
+    padding: 10px;
 }
 
 .nav-link {
@@ -281,14 +281,11 @@ input[type="file"] {
     padding: 40px;
 }
 
-/* Certificate Container */
 .certificates-container {
     display: grid;
     gap: 1.5rem;
     padding: 1rem;
 }
-
-/* Individual Certificate Item */
 .certificate-item {
     border-radius: 12px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
@@ -342,7 +339,6 @@ input[type="file"] {
     font-size: 0.9rem;
 }
 
-/* Statistics Section */
 .cert-stats {
     padding: 1.5rem;
     display: grid;
@@ -1205,7 +1201,7 @@ input[type="file"] {
     
     .upload-section,
     .certificates-list {
-        padding: 24px;
+        padding: 18px;
     }
     
     .certificates-container {
