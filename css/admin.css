@@ -605,3 +605,221 @@
     vertical-align: baseline;
     display: inline-block;
 }
+/* Restore Button */
+.restore-btn {
+    background: var(--color-info);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.restore-btn:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-small);
+}
+
+.restore-btn:active {
+    transform: translateY(0);
+}
+
+/* Disable Button */
+.disable-btn {
+    background: var(--color-warning);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.disable-btn:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-small);
+}
+
+.disable-btn:active {
+    transform: translateY(0);
+}
+
+.renew-btn {
+    background: var(--color-success);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.renew-btn:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-small);
+}
+
+.renew-btn:active {
+    transform: translateY(0);
+}
+
+.file-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.file-active {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--color-success);
+}
+
+.file-disabled {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error);
+}
+
+.file-item:has(.file-disabled) {
+    opacity: 0.7;
+    border-left-color: var(--color-error);
+}
+
+.file-item:has(.file-active) {
+    border-left-color: var(--color-success);
+}
+.file-actions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    min-height: 36px;
+    line-height: 1.2;
+    vertical-align: middle;
+}
+
+.file-actions button svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+.download-btn, .view-files-btn, .renew-btn, .restore-btn, .disable-btn, .delete-btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    line-height: 1.2;
+}
+
+.download-btn {
+    background: var(--color-success);
+    color: white;
+}
+
+.download-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-small);
+}
+
+.view-files-btn {
+    background: var(--color-info);
+    color: white;
+}
+
+.view-files-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-small);
+}
+
+.renew-btn {
+    background: var(--color-success);
+    color: white;
+}
+
+.renew-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-small);
+}
+
+.restore-btn {
+    background: var(--color-info);
+    color: white;
+}
+
+.restore-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-small);
+}
+
+.disable-btn {
+    background: var(--color-warning);
+    color: white;
+}
+
+.disable-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-small);
+}
+
+.delete-btn {
+    background: var(--color-error);
+    color: white;
+}
+
+.delete-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-small);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .file-actions {
+        flex-direction: column;
+    }
+    
+    .file-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+}

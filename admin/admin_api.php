@@ -14,7 +14,6 @@ if (!isAdmin()) {
 }
 try {
     $action = $_GET['action'] ?? $_POST['action'] ?? '';
-    
     switch ($action) {
         case 'get_stats':
             $stats = getUserStats();
@@ -51,6 +50,36 @@ try {
                 'files' => $certificates
             ]);
             break;
+        case 'disable_file':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception('POST method required');
+            }
+            $fileId = (int)($_POST['file_id'] ?? 0);
+            if ($fileId <= 0) {
+                throw new Exception('Invalid file ID');
+            }
+            $result = disableFile($fileId);
+            
+            echo json_encode([
+                'success' => $result,
+                'message' => 'File disabled successfully'
+            ]);
+            break;
+        case 'restore_file':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception('POST method required');
+            }
+            $fileId = (int)($_POST['file_id'] ?? 0);
+            if ($fileId <= 0) {
+                throw new Exception('Invalid file ID');
+            }
+            $result = restoreFile($fileId);
+            
+            echo json_encode([
+                'success' => $result,
+                'message' => 'File restored successfully'
+            ]);
+            break;
         case 'delete_file':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('POST method required');
@@ -64,6 +93,21 @@ try {
             echo json_encode([
                 'success' => $result,
                 'message' => 'File deleted successfully'
+            ]);
+            break;
+        case 'renew_file_downloads':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception('POST method required');
+            }
+            $fileId = (int)($_POST['file_id'] ?? 0);
+            if ($fileId <= 0) {
+                throw new Exception('Invalid file ID');
+            }
+            $result = renewFileDownloads($fileId);
+            
+            echo json_encode([
+                'success' => $result,
+                'message' => $result ? 'Download count renewed successfully' : 'Failed to renew download count'
             ]);
             break;
         case 'update_user_status':
@@ -222,6 +266,21 @@ try {
                     'error_count' => $errorCount,
                     'errors' => $errors
                 ]
+            ]);
+            break;
+        case 'permanent_delete_file':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception('POST method required');
+            }
+            $fileId = (int)($_POST['file_id'] ?? 0);
+            if ($fileId <= 0) {
+                throw new Exception('Invalid file ID');
+            }
+            $result = permanentDeleteFile($fileId);
+            
+            echo json_encode([
+                'success' => $result,
+                'message' => 'File permanently deleted successfully'
             ]);
             break;
         case 'export_users':
