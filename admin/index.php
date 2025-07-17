@@ -1,3 +1,15 @@
+
+
+<?php
+require_once 'admin_auth.php';
+protectAdminPage('admin_login');
+if (!checkAdminAuthTimeout()) {
+    header("Location: admin_login");
+    exit();
+}
+logAdminActivity('Accessed Admin Dashboard');
+$currentAdmin = getCurrentAdmin();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
