@@ -1,5 +1,5 @@
 <?php
-require_once 'admin_auth.php';
+require_once './../auth00/admin_auth.php';
 if (isAdminAuthenticated()) {
     logAdminActivity('Admin Logout');
 }

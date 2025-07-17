@@ -1,5 +1,5 @@
 <?php
-require_once 'admin_auth.php';
+require_once './../auth00/admin_auth.php';
 $error = '';
 $success = '';
 if (!isset($_SESSION['admin_failed_attempts'])) {
@@ -352,7 +352,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
     <div class="logo-section">
-        <img src="./../images/logo.png" alt="Company Logo" id="logo">
+        <img src="./../assets/images/logo.png" alt="Company Logo" id="logo">
     </div>
     <div class="login-container">
         <div class="login-header">

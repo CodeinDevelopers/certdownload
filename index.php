@@ -1,5 +1,5 @@
 <?php
-require_once 'auth.php';
+require_once 'auth00/user_auth.php';
 require_once 'posts.php';
 protectPage('login.php');
 if (!checkAuthTimeout(30)) {
@@ -16,18 +16,17 @@ try {
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Safer Naija Upload Portal</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Safer Naija Recipte Portal</title>
+     <link href="assets/css/user_login_style.css?v=<?php echo filemtime('assets/css/user_login_style.css'); ?>?v=<?php echo filemtime('assets/css/user_login_style.css'); ?>" rel="stylesheet">
 </head>
 
 <body>
     <header class="site-header">
         <div class="logo-container">
-            <img src="images\download.png" height="50px">
+            <img src="assets/images/download.png" height="50px">
         </div>
              <a href="https://safernaija.com.ng/" class="logout-btn">
              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" style="display: inline-block; vertical-align: middle;" aria-hidden="true"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M6 12H18M6 12L11 7M6 12L11 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg> Portal

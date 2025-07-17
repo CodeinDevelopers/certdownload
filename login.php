@@ -1,5 +1,5 @@
 <?php
-require_once 'auth.php';
+require_once 'auth00/user_auth.php';
 $error = '';
 $success = '';
 if (!isset($_SESSION['failed_attempts'])) {
@@ -444,7 +444,7 @@ input[type="password"]:disabled {
 </head>
 <body>
     <div class="logo-section">
-        <img src="images/logo.png" alt="Company Logo" id="logo">
+        <img src="assets/images/logo.png" alt="Company Logo" id="logo">
     </div>
     
     <div class="login-container">

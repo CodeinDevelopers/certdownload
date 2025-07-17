@@ -1,5 +1,5 @@
 <?php
-require_once 'auth.php';
+require_once 'auth00/user_auth.php';
 require_once 'posts.php';
 
 error_reporting(E_ALL);

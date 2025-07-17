@@ -1,7 +1,7 @@
 
 
 <?php
-require_once 'admin_auth.php';
+require_once './../auth00/admin_auth.php';
 protectAdminPage('admin_login');
 if (!checkAdminAuthTimeout()) {
     header("Location: admin_login");
@@ -16,7 +16,7 @@ $currentAdmin = getCurrentAdmin();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="./../css/admin.css">
+    <link href="assets/css/user_login_style.css?v=<?php echo filemtime('./../assets/css/admin_style.css'); ?>?v=<?php echo filemtime('./../assets/css/admin_style.css'); ?>" rel="stylesheet">
 </head>
 <body>
     <div class="container">
