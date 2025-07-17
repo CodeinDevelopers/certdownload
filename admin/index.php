@@ -1,7 +1,7 @@
 
 
 <?php
-require_once './../auth00/admin_auth.php';
+require_once './auth00/admin_auth.php';
 protectAdminPage('admin_login');
 if (!checkAdminAuthTimeout()) {
     header("Location: admin_login");
