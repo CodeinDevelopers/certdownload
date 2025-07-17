@@ -12,6 +12,8 @@ certificates/*
 # Logs folder and all contents
 logs/
 logs/*
+admin/logs
+admin/*
 
 # Common log files (additional protection)
 *.log
