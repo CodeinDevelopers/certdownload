@@ -777,6 +777,11 @@ tr:hover {
     color: var(--color-error);
 }
 
+.file-limit-exceeded {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--color-warning);
+}
+
 .file-item:has(.file-disabled) {
     opacity: 0.7;
     border-left-color: var(--color-error);
@@ -784,6 +789,11 @@ tr:hover {
 
 .file-item:has(.file-active) {
     border-left-color: var(--color-success);
+}
+
+.file-item:has(.file-limit-exceeded) {
+    opacity: 0.8;
+    border-left-color: var(--color-warning);
 }
 
 .file-actions button {

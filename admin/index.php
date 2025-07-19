@@ -74,8 +74,8 @@ $currentAdmin = getCurrentAdmin();
             </div>
         </div>
     </div>
-    <script>
-    let currentPage = 1;
+<script>
+let currentPage = 1;
 let searchTerm = "";
 let searchBarOriginalPosition = 0;
 let isSearchBarSticky = false;
@@ -124,7 +124,6 @@ function showToast(message, type = "info", duration = 5000, details = null) {
     }, duration);
   }
 }
-
 function showConfirmDialog(
   message,
   title = "Confirm Action",
@@ -164,7 +163,6 @@ function showConfirmDialog(
             transform: scale(0.9);
             transition: transform 0.3s ease;
         `;
-
     dialog.innerHTML = `
             <div style="margin-bottom: 16px;">
                 <h3 style="margin: 0 0 12px 0; color: #333; font-size: 18px;">${title}</h3>
@@ -263,7 +261,6 @@ function setupStickySearchBar() {
     }
   });
 }
-
 function loadStats() {
   fetch("admin_api.php?action=get_stats")
     .then((response) => response.json())
@@ -559,7 +556,6 @@ function displayFiles(files) {
     filesContainer.appendChild(fileDiv);
   });
 }
-
 function getFileIcon(mimeType) {
   switch (mimeType) {
     case "application/pdf":
@@ -648,20 +644,10 @@ function downloadFile(filename, certificateId = null) {
 function viewFile(filename, mimeType, originalFilename = null) {
   const displayName = originalFilename || filename;
 
-  if (mimeType.startsWith("image/")) {
+  if (mimeType === "image/jpeg" || mimeType === "image/jpg" || mimeType === "image/png") {
     showImageModal(filename, displayName);
   } else if (mimeType === "application/pdf") {
     showPDFModal(filename, displayName);
-  } else if (
-    mimeType.startsWith("text/") ||
-    mimeType === "application/json" ||
-    mimeType.includes("xml")
-  ) {
-    showTextModal(filename, displayName, mimeType);
-  } else if (mimeType.startsWith("video/")) {
-    showVideoModal(filename, displayName);
-  } else if (mimeType.startsWith("audio/")) {
-    showAudioModal(filename, displayName);
   } else {
     showUnsupportedFileModal(filename, displayName, mimeType);
   }
@@ -703,7 +689,6 @@ function showImageModal(filename, displayName) {
     }
   };
 }
-
 function showPDFModal(filename, displayName) {
   const modal = document.createElement("div");
   modal.className = "modal preview-modal";
@@ -714,156 +699,164 @@ function showPDFModal(filename, displayName) {
                 <span class="close" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</span>
             </div>
             <div class="preview-container">
-                <iframe src="./../certificates/${filename}" 
-                        style="width: 100%; height: 70vh; border: none;"
-                        onload="this.style.display='block'"
-                        onerror="showPDFError(this)">
-                </iframe>
-                <div class="pdf-fallback" style="display: none; text-align: center; padding: 40px;">
-                    <p>PDF preview not available in this browser.</p>
-                    <p>Use the buttons below to view the file.</p>
+                <div id="pdf-viewer" style="width: 100%; height: 70vh; border: 1px solid #ddd; background: #f8f9fa;">
+                    <div class="loading-spinner" style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                        Loading PDF...
+                    </div>
                 </div>
             </div>
             <div class="preview-actions">
                 <button class="download-btn" onclick="downloadFile('${filename}')">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 15C3 17.8284 3 19.2426 3.87868 20.1213C4.75736 21 6.17157 21 9 21H15C17.8284 21 19.2426 21 20.1213 20.1213C21 19.2426 21 17.8284 21 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        <path d="M12 3V16M12 16L16 11.625M12 16L8 11.625" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
                     Download PDF
                 </button>
                 <button class="external-btn" onclick="openInNewTab('./../certificates/${filename}')">
                     Open in New Tab
                 </button>
-                <button class="external-btn" onclick="openWithGoogleDocs('./../certificates/${filename}')">
-                    View with Google Docs
-                </button>
             </div>
         </div>
     `;
   document.body.appendChild(modal);
   modal.style.display = "block";
+  loadPDFJS(filename);
+  
   modal.onclick = function (event) {
     if (event.target === modal) {
       modal.remove();
     }
   };
 }
-
-function showTextModal(filename, displayName, mimeType) {
-  const modal = document.createElement("div");
-  modal.className = "modal preview-modal";
-  modal.innerHTML = `
-        <div class="modal-content preview-content text-preview">
-            <div class="modal-header">
-                <h3>${displayName}</h3>
-                <span class="close" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</span>
-            </div>
-            <div class="preview-container">
-                <div class="loading-spinner">Loading text content...</div>
-                <pre id="text-content" style="display: none; white-space: pre-wrap; max-height: 60vh; overflow: auto; background: #f5f5f5; padding: 20px; border-radius: 8px;"></pre>
-            </div>
-            <div class="preview-actions">
-                <button class="download-btn" onclick="downloadFile('${filename}')">
-                    Download File
-                </button>
-                <button class="external-btn" onclick="openInNewTab('./../certificates/${filename}')">
-                    Open in New Tab
-                </button>
-            </div>
-        </div>
-    `;
-  document.body.appendChild(modal);
-  modal.style.display = "block";
-  fetch(`./../certificates/${filename}`)
-    .then((response) => response.text())
-    .then((text) => {
-      const textElement = modal.querySelector("#text-content");
-      const loadingElement = modal.querySelector(".loading-spinner");
-
-      textElement.textContent = text;
-      textElement.style.display = "block";
-      loadingElement.style.display = "none";
-    })
-    .catch((error) => {
-      const loadingElement = modal.querySelector(".loading-spinner");
-      loadingElement.innerHTML =
-        "Error loading text content. <br><button onclick=\"downloadFile('" +
-        filename +
-        "')\">Download instead</button>";
-    });
-  modal.onclick = function (event) {
-    if (event.target === modal) {
-      modal.remove();
-    }
+function loadPDFJS(filename) {
+  if (typeof pdfjsLib !== 'undefined') {
+    renderPDF(filename);
+    return;
+  }
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  script.onload = function() {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    renderPDF(filename);
   };
+  script.onerror = function() {
+    showPDFError();
+  };
+  document.head.appendChild(script);
+}
+function renderPDF(filename) {
+  const pdfViewer = document.getElementById('pdf-viewer');
+  const loadingSpinner = pdfViewer.querySelector('.loading-spinner');
+  const pdfUrl = `./../certificates/${filename}`;
+  pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
+    loadingSpinner.style.display = 'none';
+    const navControls = document.createElement('div');
+    navControls.style.cssText = `
+      background: #333; 
+      color: white; 
+      padding: 10px; 
+      text-align: center; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+      font-size: 14px;
+    `;
+    
+    let currentPage = 1;
+    const totalPages = pdf.numPages;
+    
+    const prevBtn = document.createElement('button');
+    prevBtn.innerHTML = '← Previous';
+    prevBtn.style.cssText = 'background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; margin-right: 10px;';
+    prevBtn.disabled = true;
+    
+    const nextBtn = document.createElement('button');
+    nextBtn.innerHTML = 'Next →';
+    nextBtn.style.cssText = 'background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; margin-left: 10px;';
+    nextBtn.disabled = totalPages <= 1;
+    
+    const pageInfo = document.createElement('span');
+    pageInfo.innerHTML = `Page ${currentPage} of ${totalPages}`;
+    
+    const zoomControls = document.createElement('div');
+    zoomControls.innerHTML = `
+      <button id="zoom-out" style="background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px;">−</button>
+      <span id="zoom-level" style="margin: 0 10px;">100%</span>
+      <button id="zoom-in" style="background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px;">+</button>
+    `;
+    navControls.appendChild(prevBtn);
+    navControls.appendChild(pageInfo);
+    navControls.appendChild(nextBtn);
+    navControls.appendChild(zoomControls);
+    pdfViewer.appendChild(navControls);
+    const canvasContainer = document.createElement('div');
+    canvasContainer.style.cssText = 'overflow: auto; height: calc(100% - 50px); text-align: center; background: #ccc; padding: 20px;';
+    pdfViewer.appendChild(canvasContainer);
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvasContainer.appendChild(canvas);
+    
+    let scale = 1.0;
+    
+    function renderPage(num) {
+      pdf.getPage(num).then(function(page) {
+        const viewport = page.getViewport({ scale: scale });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        canvas.style.cssText = 'box-shadow: 0 0 10px rgba(0,0,0,0.3); background: white; margin: 0 auto; display: block;';
+        
+        const renderContext = {
+          canvasContext: ctx,
+          viewport: viewport
+        };
+        
+        page.render(renderContext);
+        pageInfo.innerHTML = `Page ${num} of ${totalPages}`;
+      });
+    }
+    prevBtn.onclick = function() {
+      if (currentPage > 1) {
+        currentPage--;
+        renderPage(currentPage);
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = false;
+      }
+    };
+    
+    nextBtn.onclick = function() {
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderPage(currentPage);
+        nextBtn.disabled = currentPage === totalPages;
+        prevBtn.disabled = false;
+      }
+    };
+    
+    document.getElementById('zoom-in').onclick = function() {
+      scale += 0.25;
+      document.getElementById('zoom-level').textContent = Math.round(scale * 100) + '%';
+      renderPage(currentPage);
+    };
+    
+    document.getElementById('zoom-out').onclick = function() {
+      if (scale > 0.5) {
+        scale -= 0.25;
+        document.getElementById('zoom-level').textContent = Math.round(scale * 100) + '%';
+        renderPage(currentPage);
+      }
+    };
+    
+    // Render first page
+    renderPage(1);
+    
+  }).catch(function(error) {
+    showPDFError();
+    console.error('Error loading PDF:', error);
+  });
 }
 
-function showVideoModal(filename, displayName) {
-  const modal = document.createElement("div");
-  modal.className = "modal preview-modal";
-  modal.innerHTML = `
-        <div class="modal-content preview-content">
-            <div class="modal-header">
-                <h3>${displayName}</h3>
-                <span class="close" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</span>
-            </div>
-            <div class="preview-container">
-                <video controls style="width: 100%; max-height: 70vh;">
-                    <source src="./../certificates/${filename}" type="video/mp4">
-                    <source src="./../certificates/${filename}" type="video/webm">
-                    <source src="./../certificates/${filename}" type="video/ogg">
-                    Your browser does not support the video tag.
-                </video>
-            </div>
-            <div class="preview-actions">
-                <button class="download-btn" onclick="downloadFile('${filename}')">
-                    Download Video
-                </button>
-                <button class="external-btn" onclick="openInNewTab('./../certificates/${filename}')">
-                    Open in New Tab
-                </button>
-            </div>
-        </div>
-    `;
-  document.body.appendChild(modal);
-  modal.style.display = "block";
-
-  modal.onclick = function (event) {
-    if (event.target === modal) {
-      modal.remove();
-    }
-  };
-}
-function showAudioModal(filename, displayName) {
-  const modal = document.createElement("div");
-  modal.className = "modal preview-modal";
-  modal.innerHTML = `
-        <div class="modal-content preview-content">
-            <div class="modal-header">
-                <h3>${displayName}</h3>
-                <span class="close" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</span>
-            </div>
-            <div class="preview-container" style="text-align: center; padding: 40px;">
-                <audio controls style="width: 100%; max-width: 500px;">
-                    <source src="./../certificates/${filename}" type="audio/mpeg">
-                    <source src="./../certificates/${filename}" type="audio/ogg">
-                    <source src="./../certificates/${filename}" type="audio/wav">
-                    Your browser does not support the audio element.
-                </audio>
-            </div>
-            <div class="preview-actions">
-                <button class="download-btn" onclick="downloadFile('${filename}')">
-                    Download Audio
-                </button>
-            </div>
-        </div>
-    `;
-  document.body.appendChild(modal);
-  modal.style.display = "block";
-
-  modal.onclick = function (event) {
-    if (event.target === modal) {
-      modal.remove();
-    }
-  };
-}
 function showUnsupportedFileModal(filename, displayName, mimeType) {
   const modal = document.createElement("div");
   modal.className = "modal preview-modal";
@@ -874,20 +867,19 @@ function showUnsupportedFileModal(filename, displayName, mimeType) {
                 <span class="close" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</span>
             </div>
             <div class="preview-container" style="text-align: center; padding: 40px;">
-                <div style="font-size: 48px; margin-bottom: 20px;">📄</div>
+                <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
                 <p><strong>File Type:</strong> ${mimeType}</p>
-                <p>Preview not available for this file type.</p>
-                <p>Use the options below to view or download the file.</p>
+                <p><strong>Unsupported file type</strong></p>
+                <p>This application only supports PDF, JPG, JPEG, and PNG files.</p>
+                <p>You can still download the file using the button below.</p>
             </div>
             <div class="preview-actions">
                 <button class="download-btn" onclick="downloadFile('${filename}')">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 15C3 17.8284 3 19.2426 3.87868 20.1213C4.75736 21 6.17157 21 9 21H15C17.8284 21 19.2426 21 20.1213 20.1213C21 19.2426 21 17.8284 21 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        <path d="M12 3V16M12 16L16 11.625M12 16L8 11.625" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
                     Download File
-                </button>
-                <button class="external-btn" onclick="openInNewTab('./../certificates/${filename}')">
-                    Try Opening in Browser
-                </button>
-                <button class="external-btn" onclick="openWithGoogleDocs('./../certificates/${filename}')">
-                    Try Google Docs Viewer
                 </button>
             </div>
         </div>
@@ -901,6 +893,7 @@ function showUnsupportedFileModal(filename, displayName, mimeType) {
     }
   };
 }
+
 function showImageError(imgElement) {
   imgElement.style.display = "none";
   const container = imgElement.parentElement;
@@ -912,22 +905,22 @@ function showImageError(imgElement) {
         </div>
     `;
 }
-function showPDFError(iframeElement) {
-  iframeElement.style.display = "none";
-  const fallback = iframeElement.parentElement.querySelector(".pdf-fallback");
-  if (fallback) {
-    fallback.style.display = "block";
+
+function showPDFError() {
+  const pdfViewer = document.getElementById('pdf-viewer');
+  if (pdfViewer) {
+    pdfViewer.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
+        <p style="color: #dc3545; font-size: 18px; margin-bottom: 10px;">❌ Could not load PDF</p>
+        <p>The PDF file might be corrupted or there was an error loading the PDF viewer.</p>
+        <p>Try downloading the file instead.</p>
+      </div>
+    `;
   }
 }
+
 function openInNewTab(url) {
   window.open(url, "_blank");
-}
-function openWithGoogleDocs(url) {
-  const fullUrl = window.location.origin + "/" + url;
-  const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(
-    fullUrl
-  )}`;
-  window.open(googleDocsUrl, "_blank");
 }
 
 function displayFiles(files) {
@@ -942,8 +935,19 @@ function displayFiles(files) {
     const fileDiv = document.createElement("div");
     fileDiv.className = "file-item";
     const isDisabled = file.deleted == 1;
-    const statusClass = isDisabled ? "file-disabled" : "file-active";
-    const statusText = isDisabled ? "DISABLED" : "ACTIVE";
+    const hasExceededDownloads = file.download_count >= file.max_downloads;
+    let statusClass, statusText;
+    if (isDisabled) {
+      statusClass = "file-disabled";
+      statusText = "DISABLED";
+    } else if (hasExceededDownloads) {
+      statusClass = "file-limit-exceeded";
+      statusText = "DOWNLOAD LIMIT EXCEEDED";
+    } else {
+      statusClass = "file-active";
+      statusText = "ACTIVE";
+    }
+    
     const actionButton = isDisabled
       ? `<button class="restore-btn" onclick="restoreFile(${file.id})">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1015,7 +1019,6 @@ function displayFiles(files) {
     filesContainer.appendChild(fileDiv);
   });
 }
-
 async function disableFile(fileId) {
   const confirmed = await showConfirmDialog(
     "Are you sure you want to disable this file? It will be marked as deleted but not permanently removed.",
