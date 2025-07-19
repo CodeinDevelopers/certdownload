@@ -497,7 +497,6 @@ input[type="file"] {
     font-weight: bold;
 }
 
-/* Permanent Delete Button */
 .permanent-delete-btn {
     background: #dc3545;
     color: white;
@@ -1384,7 +1383,6 @@ input[type="file"] {
             color: #6c757d;
             font-size: 16px;
         }
-        /* Add this CSS to your existing stylesheet */
 
 
 select {
@@ -1422,7 +1420,6 @@ select:disabled {
     opacity: 0.7;
 }
 
-/* Option styling */
 select option {
     padding: 8px 12px;
     background: white;
