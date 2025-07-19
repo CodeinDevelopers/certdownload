@@ -8,38 +8,28 @@ if (!isAdmin()) {
     ]);
     exit;
 }
-
 try {
     $action = $_GET['action'] ?? $_POST['action'] ?? '';
     if ($action === 'download_file') {
-        // Clean any existing output buffers immediately
         while (ob_get_level()) {
             ob_end_clean();
         }
-        
         $filename = $_GET['filename'] ?? '';
         if (empty($filename)) {
             http_response_code(400);
             die("Error: Filename is required");
         }
-        
-        // Sanitize filename
         $filename = basename($filename);
         $filePath = 'certificates/' . $filename;
-        
-        // Check if file exists and is readable
         if (!file_exists($filePath)) {
             http_response_code(404);
             die("Error: File not found");
         }
-        
         if (!is_readable($filePath)) {
             http_response_code(403);
             die("Error: File not readable");
         }
-        
         try {
-            // Get file info from database
             $pdo = AdminDatabaseConfig::getConnection();
             $stmt = $pdo->prepare("SELECT original_filename, mime_type FROM certificates WHERE filename = ? AND deleted = 0");
             $stmt->execute([$filename]);
@@ -49,19 +39,11 @@ try {
                 http_response_code(404);
                 die("Error: File not found in database");
             }
-            
-            // Check if headers have already been sent
             if (headers_sent()) {
                 die("Error: Headers already sent, cannot download file");
             }
-            
-            // Get file size
             $fileSize = filesize($filePath);
-            
-            // Determine content type
             $contentType = $fileInfo['mime_type'] ?: 'application/octet-stream';
-            
-            // Set download headers
             header('Content-Type: ' . $contentType);
             header('Content-Disposition: attachment; filename="' . addcslashes($fileInfo['original_filename'], '"\\') . '"');
             header('Content-Length: ' . $fileSize);
@@ -70,18 +52,12 @@ try {
             header('Pragma: no-cache');
             header('Expires: 0');
             header('Accept-Ranges: bytes');
-            
-            // Flush any remaining output
             if (ob_get_level()) {
                 ob_end_flush();
             }
-            
-            // Output file content
             if (readfile($filePath) === false) {
                 die("Error: Failed to read file");
             }
-            
-            // Log the download activity
             logAdminActivity('Download File', "Downloaded file: {$fileInfo['original_filename']} ($filename)");
             
         } catch (Exception $e) {
@@ -89,15 +65,12 @@ try {
             die("Error: " . $e->getMessage());
         }
         
-        exit; // Important: Exit immediately after file download
+        exit; 
     }
-
     header('Content-Type: application/json');
     header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Methods: GET, POST');
     header('Access-Control-Allow-Headers: Content-Type');
-
-    // Handle other API actions
     switch ($action) {
         case 'get_stats':
             $stats = getUserStats();
@@ -106,7 +79,6 @@ try {
                 'stats' => $stats
             ]);
             break;
-
         case 'get_users':
             $page = (int)($_GET['page'] ?? 1);
             $search = $_GET['search'] ?? '';
@@ -123,85 +95,68 @@ try {
                 ]
             ]);
             break;
-            
         case 'get_user_files':
             $userId = (int)($_GET['user_id'] ?? 0);
             
             if ($userId <= 0) {
                 throw new Exception('Invalid user ID');
             }
-            
             $certificates = getUserCertificates($userId);
             echo json_encode([
                 'success' => true,
                 'files' => $certificates
             ]);
             break;
-            
         case 'disable_file':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('POST method required');
             }
-            
             $fileId = (int)($_POST['file_id'] ?? 0);
             if ($fileId <= 0) {
                 throw new Exception('Invalid file ID');
             }
-            
             $result = disableFile($fileId);
-            
             echo json_encode([
                 'success' => $result,
                 'message' => 'File disabled successfully'
             ]);
             break;
-            
         case 'restore_file':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('POST method required');
             }
-            
             $fileId = (int)($_POST['file_id'] ?? 0);
             if ($fileId <= 0) {
                 throw new Exception('Invalid file ID');
             }
-            
             $result = restoreFile(fileId: $fileId);
-            
             echo json_encode([
                 'success' => $result,
                 'message' => 'File restored successfully'
             ]);
             break;
-            
         case 'delete_file':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('POST method required');
             }
-            
             $fileId = (int)($_POST['file_id'] ?? 0);
             if ($fileId <= 0) {
                 throw new Exception('Invalid file ID');
             }
-            
             $result = deleteCertificate($fileId);
-            
             echo json_encode([
                 'success' => $result,
                 'message' => 'File deleted successfully'
             ]);
             break;
-            
         case 'renew_file_downloads':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('POST method required');
             }
-            
             $fileId = (int)($_POST['file_id'] ?? 0);
             if ($fileId <= 0) {
                 throw new Exception('Invalid file ID');
             }
-            
             $result = renewFileDownloads($fileId);
             
             echo json_encode([
@@ -209,12 +164,10 @@ try {
                 'message' => $result ? 'Download count renewed successfully' : 'Failed to renew download count'
             ]);
             break;
-            
         case 'update_user_status':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('POST method required');
             }
-            
             $userId = (int)($_POST['user_id'] ?? 0);
             $status = (int)($_POST['status'] ?? 0);
             
@@ -385,8 +338,7 @@ try {
             if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
                 throw new Exception('GET method required');
             }
-            
-            // Clean output buffers for file export
+    
             while (ob_get_level()) {
                 ob_end_clean();
             }
@@ -404,14 +356,10 @@ try {
                 header('Expires: 0');
                 
                 $output = fopen('php://output', 'w');
-                
-                // CSV header
                 fputcsv($output, [
                     'ID', 'First Name', 'Last Name', 'Username', 'Email', 'Mobile', 
                     'Status', 'Email Verified', 'SMS Verified', 'Balance', 'Created At', 'Updated At'
                 ]);
-                
-                // CSV data
                 foreach ($users as $user) {
                     fputcsv($output, [
                         $user['id'],

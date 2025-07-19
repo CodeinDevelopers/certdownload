@@ -992,3 +992,127 @@ tr:hover {
         max-width: 70%;
     }
 }
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 1000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    max-width: 450px;
+    min-width: 300px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    word-wrap: break-word;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+.toast-success {
+    background: #28a745;
+    border-left: 4px solid #1e7e34;
+}
+
+.toast-error {
+    background: #dc3545;
+    border-left: 4px solid #bd2130;
+}
+
+.toast-info {
+    background: #17a2b8;
+    border-left: 4px solid #138496;
+}
+
+.toast-warning {
+    background: #ffc107;
+    color: #212529;
+    border-left: 4px solid #e0a800;
+}
+
+.toast-header {
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 15px;
+}
+
+.toast-body {
+    margin-bottom: 4px;
+}
+
+.toast-detail {
+    font-size: 13px;
+    opacity: 0.9;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.toast-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.toast-close:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.toast-warning .toast-close {
+    color: #212529;
+}
+
+.toast-warning .toast-close:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.toast-warning .toast-detail {
+    border-top: 1px solid rgba(0, 0, 0, 0.2);
+}
+.file-icon {
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.pdf-icon {
+  stroke: #e53e3e;
+  fill: #fed7d7;
+  stroke-width: 1.5;
+}
+
+.pdf-icon text {
+  fill: #e53e3e;
+}
+
+.image-icon {
+  stroke: #38a169;
+  fill: #c6f6d5;
+  stroke-width: 1.5;
+}
+
+.default-icon {
+  stroke: #718096;
+  fill: #edf2f7;
+  stroke-width: 1.5;
+}
