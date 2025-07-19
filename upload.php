@@ -251,7 +251,7 @@ try {
     $insertStmt = $pdo->prepare("
         INSERT INTO certificates 
         (user_id, post_id, imei, vin_number, serial_number, device_identifier, filename, original_filename, file_path, file_size, mime_type, download_count, max_downloads, deleted, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 5, 0, NOW(), NOW())
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 2, 0, NOW(), NOW())
     ");
     $insertStmt->execute([
         $currentUser['id'],
