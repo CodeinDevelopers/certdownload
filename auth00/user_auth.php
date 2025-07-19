@@ -70,18 +70,12 @@ function protectPage($redirectTo = 'login.php') {
 function authenticateUser($mobile, $password) {
     try {
         $pdo = DatabaseConfig::getConnection();
-        
-        // Get user by mobile number
         $stmt = $pdo->prepare("SELECT id, firstname, lastname, username, email, mobile, password, status, ev, sv, balance FROM users WHERE mobile = ? AND status = 1");
         $stmt->execute([$mobile]);
         $user = $stmt->fetch();
-        
         if ($user && verifyPassword($password, $user['password'])) {
-            // Update last login time
             $updateStmt = $pdo->prepare("UPDATE users SET updated_at = NOW() WHERE id = ?");
             $updateStmt->execute([$user['id']]);
-            
-            // Set session variables
             $_SESSION['logged_in'] = true;
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
@@ -91,18 +85,14 @@ function authenticateUser($mobile, $password) {
             $_SESSION['email'] = $user['email'];
             $_SESSION['balance'] = $user['balance'];
             $_SESSION['auth_time'] = time();
-            
-            // Remove password from returned user data for security
             unset($user['password']);
             return $user;
         }
-        
         return false;
     } catch (Exception $e) {
         throw new Exception("Authentication error: " . $e->getMessage());
     }
 }
-
 /**
  * Hash password using Laravel-compatible method
  * @param string $password - Plain text password
@@ -111,7 +101,6 @@ function authenticateUser($mobile, $password) {
 function hashPassword($password) {
     return password_hash($password, PASSWORD_DEFAULT);
 }
-
 /**
  * Verify password against hash (Laravel-compatible)
  * @param string $password - Plain text password
@@ -121,7 +110,6 @@ function hashPassword($password) {
 function verifyPassword($password, $hash) {
     return password_verify($password, $hash);
 }
-
 /**
  * Change user password
  * @param int $userId - User ID
@@ -141,7 +129,6 @@ function changePassword($userId, $newPassword) {
         throw new Exception("Password change error: " . $e->getMessage());
     }
 }
-
 /**
  * Validate login credentials
  * @param string $mobile - Mobile number
@@ -164,7 +151,6 @@ function validateLogin($mobile, $password) {
         return false;
     }
 }
-
 function getCurrentUser() {
     if (!isAuthenticated()) {
         return null;
@@ -230,7 +216,6 @@ function createUser($firstname, $lastname, $username, $email, $mobile, $password
         throw new Exception("User creation error: " . $e->getMessage());
     }
 }
-
 function updateUser($userId, $data) {
     try {
         $pdo = DatabaseConfig::getConnection();
@@ -245,17 +230,13 @@ function updateUser($userId, $data) {
                 $values[] = $value;
             }
         }
-        
         if (empty($updateFields)) {
             throw new Exception("No valid fields to update");
         }
-        
         $values[] = $userId;
         $sql = "UPDATE users SET " . implode(', ', $updateFields) . ", updated_at = NOW() WHERE id = ?";
-        
         $stmt = $pdo->prepare($sql);
         $stmt->execute($values);
-        
         return $stmt->rowCount() > 0;
     } catch (Exception $e) {
         throw new Exception("User update error: " . $e->getMessage());
@@ -288,21 +269,17 @@ function getUserFullName() {
     
     return trim($firstname . ' ' . $lastname);
 }
-
 function isEmailVerified() {
     if (!isAuthenticated()) {
         return false;
     }
-    
     $user = getCurrentUser();
     return $user && $user['ev'] == 1;
 }
-
 function isSMSVerified() {
     if (!isAuthenticated()) {
         return false;
     }
-    
     $user = getCurrentUser();
     return $user && $user['sv'] == 1;
 }
@@ -314,8 +291,6 @@ function getUserBalance() {
     $user = getCurrentUser();
     return $user ? $user['balance'] : 0;
 }
-
-// Legacy function - deprecated
 function authenticate($password) {
     throw new Exception("authenticate() function is deprecated. Use authenticateUser(\$mobile, \$password) instead.");
 }

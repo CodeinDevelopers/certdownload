@@ -35,6 +35,7 @@ try {
     }
     error_log("Upload attempt by user: " . $currentUser['id'] . " (" . $currentUser['firstname'] . " " . $currentUser['lastname'] . ")");
     error_log("POST data: " . print_r($_POST, true));
+
     if (!isset($_POST['post_id']) || empty(trim($_POST['post_id']))) {
         throw new Exception('Post selection is required');
     }
@@ -44,16 +45,59 @@ try {
     $postStmt = $pdo->prepare("SELECT id, title, user_id FROM ad_lists WHERE id = ? AND user_id = ? AND deleted_at IS NULL AND status = 1");
     $postStmt->execute([$postId, $currentUser['id']]);
     $post = $postStmt->fetch();
-
     if (!$post) {
         throw new Exception('Invalid post selection or post not found');
     }
     error_log("Post verified: " . $post['title']);
+    $deletedCertStmt = $pdo->prepare("
+        SELECT id, filename, original_filename, file_path, imei, vin_number, serial_number, device_identifier 
+        FROM certificates 
+        WHERE user_id = ? AND post_id = ? AND deleted = 1
+    ");
+    $deletedCertStmt->execute([$currentUser['id'], $postId]);
+    $deletedCertificates = $deletedCertStmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!empty($deletedCertificates)) {
+        error_log("Found " . count($deletedCertificates) . " soft-deleted certificate(s) for this user and post. Proceeding with permanent deletion.");
+        $pdo->beginTransaction();
+        try {
+            foreach ($deletedCertificates as $deletedCert) {
+                if (!empty($deletedCert['file_path']) && file_exists($deletedCert['file_path'])) {
+                    if (unlink($deletedCert['file_path'])) {
+                        error_log("Successfully deleted physical file: " . $deletedCert['file_path']);
+                    } else {
+                        error_log("Warning: Failed to delete physical file: " . $deletedCert['file_path']);
+                    }
+                } else {
+                    error_log("Physical file not found or path empty: " . ($deletedCert['file_path'] ?? 'N/A'));
+                }
+                $permanentDeleteStmt = $pdo->prepare("DELETE FROM certificates WHERE id = ? AND user_id = ? AND deleted = 1");
+                $permanentDeleteStmt->execute([$deletedCert['id'], $currentUser['id']]);
+                if ($permanentDeleteStmt->rowCount() > 0) {
+                    error_log("Permanently deleted certificate ID: " . $deletedCert['id']);
+                    $logDir = './logs/';
+                    if (!is_dir($logDir)) {
+                        mkdir($logDir, 0755, true);
+                    }
+                    $logEntry = date('Y-m-d H:i:s') . " - PERMANENTLY DELETED: {$deletedCert['filename']} (Original: {$deletedCert['original_filename']}) for User ID: {$currentUser['id']} ({$currentUser['firstname']} {$currentUser['lastname']}) - Mobile: {$currentUser['mobile']} - Post ID: {$postId} - IMEI: {$deletedCert['imei']} - VIN: {$deletedCert['vin_number']} - Serial: {$deletedCert['serial_number']} - Device ID: {$deletedCert['device_identifier']} - File path: {$deletedCert['file_path']}\n";
+                    file_put_contents($logDir . 'permanent_deletion_log.txt', $logEntry, FILE_APPEND | LOCK_EX);
+                } else {
+                    error_log("Warning: No rows affected when permanently deleting certificate ID: " . $deletedCert['id']);
+                }
+            }
+            $pdo->commit();
+            error_log("Successfully completed permanent deletion of soft-deleted certificates for user {$currentUser['id']} and post {$postId}");
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            error_log("Error during permanent deletion of soft-deleted certificates: " . $e->getMessage());
+            throw new Exception("Failed to clean up previously deleted certificates: " . $e->getMessage());
+        }
+    }
     $deviceIdentifier = null;
     $identifierType = null;
     if (isset($_POST['device_identifier']) && !empty(trim($_POST['device_identifier']))) {
         $deviceIdentifier = trim($_POST['device_identifier']);
         error_log("Device identifier from form: '$deviceIdentifier'");
+
         $postTitle = $post['title'];
         $patterns = [
             'IMEI' => '/IMEI:\s*([A-Za-z0-9]+)/i',
@@ -115,7 +159,6 @@ try {
         error_log("File upload error: " . $error_message);
         throw new Exception($error_message);
     }
-
     $file = $_FILES['file'];
     $maxSize = 5 * 1024 * 1024;
     $allowedTypes = [
@@ -148,9 +191,8 @@ try {
     $checkPostStmt = $pdo->prepare("SELECT id FROM certificates WHERE user_id = ? AND post_id = ? AND deleted = 0");
     $checkPostStmt->execute([$currentUser['id'], $postId]);
     $existingCert = $checkPostStmt->fetch();
-    
     if ($existingCert) {
-        throw new Exception('A certificate for this post already exists. Please delete the existing certificate first or select a different post.');
+        throw new Exception('A Purchase Recipt for this post has been registered. <br> Please delete the existing recipt first If it is invalid.');
     }
     if ($deviceIdentifier && $identifierType) {
         $columnName = '';
@@ -165,7 +207,6 @@ try {
                 $columnName = 'serial_number';
                 break;
         }
-        
         if ($columnName) {
             $checkIdentifierStmt = $pdo->prepare("SELECT id, user_id FROM certificates WHERE $columnName = ? AND deleted = 0");
             $checkIdentifierStmt->execute([$deviceIdentifier]);
@@ -270,13 +311,16 @@ try {
     if ($serialNumber) {
         $response['serial_number'] = $serialNumber;
     }
+    if (!empty($deletedCertificates)) {
+        $response['cleaned_up_certificates'] = count($deletedCertificates);
+        $response['message'] .= '. Previously deleted certificates have been permanently removed.';
+    }
     echo json_encode($response);
 } catch (Exception $e) {
     if (isset($filepath) && file_exists($filepath)) {
         unlink($filepath);
     }
     error_log("Upload error: " . $e->getMessage());
-    
     http_response_code(400);
     echo json_encode([
         'success' => false,
