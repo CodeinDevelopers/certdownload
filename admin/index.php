@@ -357,6 +357,7 @@ $currentAdmin = getCurrentAdmin();
                 filesContainer.appendChild(fileDiv);
             });
         }
+
         function getFileIcon(mimeType) {
             switch (mimeType) {
                 case 'application/pdf':
@@ -427,30 +428,31 @@ $currentAdmin = getCurrentAdmin();
                     document.body.style.cursor = originalCursor;
                 });
         }
-function viewFile(filename, mimeType, originalFilename = null) {
-    const displayName = originalFilename || filename;
-    
-    if (mimeType.startsWith('image/')) {
-        showImageModal(filename, displayName);
-    } else if (mimeType === 'application/pdf') {
-        showPDFModal(filename, displayName);
-    } else if (mimeType.startsWith('text/') || 
-               mimeType === 'application/json' || 
-               mimeType.includes('xml')) {
-        showTextModal(filename, displayName, mimeType);
-    } else if (mimeType.startsWith('video/')) {
-        showVideoModal(filename, displayName);
-    } else if (mimeType.startsWith('audio/')) {
-        showAudioModal(filename, displayName);
-    } else {
-        showUnsupportedFileModal(filename, displayName, mimeType);
-    }
-}
 
-function showImageModal(filename, displayName) {
-    const modal = document.createElement('div');
-    modal.className = 'modal preview-modal';
-    modal.innerHTML = `
+        function viewFile(filename, mimeType, originalFilename = null) {
+            const displayName = originalFilename || filename;
+
+            if (mimeType.startsWith('image/')) {
+                showImageModal(filename, displayName);
+            } else if (mimeType === 'application/pdf') {
+                showPDFModal(filename, displayName);
+            } else if (mimeType.startsWith('text/') ||
+                mimeType === 'application/json' ||
+                mimeType.includes('xml')) {
+                showTextModal(filename, displayName, mimeType);
+            } else if (mimeType.startsWith('video/')) {
+                showVideoModal(filename, displayName);
+            } else if (mimeType.startsWith('audio/')) {
+                showAudioModal(filename, displayName);
+            } else {
+                showUnsupportedFileModal(filename, displayName, mimeType);
+            }
+        }
+
+        function showImageModal(filename, displayName) {
+            const modal = document.createElement('div');
+            modal.className = 'modal preview-modal';
+            modal.innerHTML = `
         <div class="modal-content preview-content">
             <div class="modal-header">
                 <h3>${displayName}</h3>
@@ -476,21 +478,21 @@ function showImageModal(filename, displayName) {
             </div>
         </div>
     `;
-    document.body.appendChild(modal);
-    modal.style.display = 'block';
-    const img = modal.querySelector('#preview-image');
-    img.src = `./../certificates/${filename}`;
-    modal.onclick = function(event) {
-        if (event.target === modal) {
-            modal.remove();
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+            const img = modal.querySelector('#preview-image');
+            img.src = `./../certificates/${filename}`;
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.remove();
+                }
+            }
         }
-    }
-}
 
-function showPDFModal(filename, displayName) {
-    const modal = document.createElement('div');
-    modal.className = 'modal preview-modal';
-    modal.innerHTML = `
+        function showPDFModal(filename, displayName) {
+            const modal = document.createElement('div');
+            modal.className = 'modal preview-modal';
+            modal.innerHTML = `
         <div class="modal-content preview-content pdf-preview">
             <div class="modal-header">
                 <h3>${displayName}</h3>
@@ -520,20 +522,19 @@ function showPDFModal(filename, displayName) {
             </div>
         </div>
     `;
-    document.body.appendChild(modal);
-    modal.style.display = 'block';
-    
-    modal.onclick = function(event) {
-        if (event.target === modal) {
-            modal.remove();
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.remove();
+                }
+            }
         }
-    }
-}
 
-function showTextModal(filename, displayName, mimeType) {
-    const modal = document.createElement('div');
-    modal.className = 'modal preview-modal';
-    modal.innerHTML = `
+        function showTextModal(filename, displayName, mimeType) {
+            const modal = document.createElement('div');
+            modal.className = 'modal preview-modal';
+            modal.innerHTML = `
         <div class="modal-content preview-content text-preview">
             <div class="modal-header">
                 <h3>${displayName}</h3>
@@ -553,36 +554,33 @@ function showTextModal(filename, displayName, mimeType) {
             </div>
         </div>
     `;
-    document.body.appendChild(modal);
-    modal.style.display = 'block';
-    
-    // Load text content
-    fetch(`./../certificates/${filename}`)
-        .then(response => response.text())
-        .then(text => {
-            const textElement = modal.querySelector('#text-content');
-            const loadingElement = modal.querySelector('.loading-spinner');
-            
-            textElement.textContent = text;
-            textElement.style.display = 'block';
-            loadingElement.style.display = 'none';
-        })
-        .catch(error => {
-            const loadingElement = modal.querySelector('.loading-spinner');
-            loadingElement.innerHTML = 'Error loading text content. <br><button onclick="downloadFile(\'' + filename + '\')">Download instead</button>';
-        });
-    
-    modal.onclick = function(event) {
-        if (event.target === modal) {
-            modal.remove();
-        }
-    }
-}
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+            fetch(`./../certificates/${filename}`)
+                .then(response => response.text())
+                .then(text => {
+                    const textElement = modal.querySelector('#text-content');
+                    const loadingElement = modal.querySelector('.loading-spinner');
 
-function showVideoModal(filename, displayName) {
-    const modal = document.createElement('div');
-    modal.className = 'modal preview-modal';
-    modal.innerHTML = `
+                    textElement.textContent = text;
+                    textElement.style.display = 'block';
+                    loadingElement.style.display = 'none';
+                })
+                .catch(error => {
+                    const loadingElement = modal.querySelector('.loading-spinner');
+                    loadingElement.innerHTML = 'Error loading text content. <br><button onclick="downloadFile(\'' + filename + '\')">Download instead</button>';
+                });
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.remove();
+                }
+            }
+        }
+
+        function showVideoModal(filename, displayName) {
+            const modal = document.createElement('div');
+            modal.className = 'modal preview-modal';
+            modal.innerHTML = `
         <div class="modal-content preview-content">
             <div class="modal-header">
                 <h3>${displayName}</h3>
@@ -606,20 +604,20 @@ function showVideoModal(filename, displayName) {
             </div>
         </div>
     `;
-    document.body.appendChild(modal);
-    modal.style.display = 'block';
-    
-    modal.onclick = function(event) {
-        if (event.target === modal) {
-            modal.remove();
-        }
-    }
-}
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
 
-function showAudioModal(filename, displayName) {
-    const modal = document.createElement('div');
-    modal.className = 'modal preview-modal';
-    modal.innerHTML = `
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.remove();
+                }
+            }
+        }
+
+        function showAudioModal(filename, displayName) {
+            const modal = document.createElement('div');
+            modal.className = 'modal preview-modal';
+            modal.innerHTML = `
         <div class="modal-content preview-content">
             <div class="modal-header">
                 <h3>${displayName}</h3>
@@ -640,20 +638,20 @@ function showAudioModal(filename, displayName) {
             </div>
         </div>
     `;
-    document.body.appendChild(modal);
-    modal.style.display = 'block';
-    
-    modal.onclick = function(event) {
-        if (event.target === modal) {
-            modal.remove();
-        }
-    }
-}
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
 
-function showUnsupportedFileModal(filename, displayName, mimeType) {
-    const modal = document.createElement('div');
-    modal.className = 'modal preview-modal';
-    modal.innerHTML = `
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.remove();
+                }
+            }
+        }
+
+        function showUnsupportedFileModal(filename, displayName, mimeType) {
+            const modal = document.createElement('div');
+            modal.className = 'modal preview-modal';
+            modal.innerHTML = `
         <div class="modal-content preview-content">
             <div class="modal-header">
                 <h3>${displayName}</h3>
@@ -678,82 +676,76 @@ function showUnsupportedFileModal(filename, displayName, mimeType) {
             </div>
         </div>
     `;
-    document.body.appendChild(modal);
-    modal.style.display = 'block';
-    
-    modal.onclick = function(event) {
-        if (event.target === modal) {
-            modal.remove();
-        }
-    }
-}
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
 
-// Helper functions
-function showImageError(imgElement) {
-    imgElement.style.display = 'none';
-    const container = imgElement.parentElement;
-    const loadingSpinner = container.querySelector('.loading-spinner');
-    loadingSpinner.innerHTML = `
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.remove();
+                }
+            }
+        }
+
+        function showImageError(imgElement) {
+            imgElement.style.display = 'none';
+            const container = imgElement.parentElement;
+            const loadingSpinner = container.querySelector('.loading-spinner');
+            loadingSpinner.innerHTML = `
         <div style="text-align: center; padding: 40px;">
             <p>❌ Could not load image</p>
             <p>The file might be corrupted or the path is incorrect.</p>
         </div>
     `;
-}
+        }
 
-function showPDFError(iframeElement) {
-    iframeElement.style.display = 'none';
-    const fallback = iframeElement.parentElement.querySelector('.pdf-fallback');
-    if (fallback) {
-        fallback.style.display = 'block';
-    }
-}
+        function showPDFError(iframeElement) {
+            iframeElement.style.display = 'none';
+            const fallback = iframeElement.parentElement.querySelector('.pdf-fallback');
+            if (fallback) {
+                fallback.style.display = 'block';
+            }
+        }
 
-function openInNewTab(url) {
-    window.open(url, '_blank');
-}
+        function openInNewTab(url) {
+            window.open(url, '_blank');
+        }
 
-function openWithGoogleDocs(url) {
-    const fullUrl = window.location.origin + '/' + url;
-    const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fullUrl)}`;
-    window.open(googleDocsUrl, '_blank');
-}
+        function openWithGoogleDocs(url) {
+            const fullUrl = window.location.origin + '/' + url;
+            const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fullUrl)}`;
+            window.open(googleDocsUrl, '_blank');
+        }
 
-// Update the displayFiles function to pass original filename
-function displayFiles(files) {
-    const filesContainer = document.getElementById('filesContainer');
-    if (files.length === 0) {
-        filesContainer.innerHTML = '<p class="no-files">No files uploaded by this user</p>';
-        return;
-    }
-
-    filesContainer.innerHTML = '';
-    files.forEach(file => {
-        const fileDiv = document.createElement('div');
-        fileDiv.className = 'file-item';
-        const isDisabled = file.deleted == 1;
-        const statusClass = isDisabled ? 'file-disabled' : 'file-active';
-        const statusText = isDisabled ? 'DISABLED' : 'ACTIVE';
-
-        const actionButton = isDisabled ?
-            `<button class="restore-btn" onclick="restoreFile(${file.id})">
+        function displayFiles(files) {
+            const filesContainer = document.getElementById('filesContainer');
+            if (files.length === 0) {
+                filesContainer.innerHTML = '<p class="no-files">No files uploaded by this user</p>';
+                return;
+            }
+            filesContainer.innerHTML = '';
+            files.forEach(file => {
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'file-item';
+                const isDisabled = file.deleted == 1;
+                const statusClass = isDisabled ? 'file-disabled' : 'file-active';
+                const statusText = isDisabled ? 'DISABLED' : 'ACTIVE';
+                const actionButton = isDisabled ?
+                    `<button class="restore-btn" onclick="restoreFile(${file.id})">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M4.52185 7H7C7.55229 7 8 7.44772 8 8C8 8.55229 7.55228 9 7 9H3C1.89543 9 1 8.10457 1 7V3C1 2.44772 1.44772 2 2 2C2.55228 2 3 2.44772 3 3V5.6754C4.26953 3.8688 6.06062 2.47676 8.14852 1.69631C10.6633 0.756291 13.435 0.768419 15.9415 1.73041C18.448 2.69239 20.5161 4.53782 21.7562 6.91897C22.9963 9.30013 23.3228 12.0526 22.6741 14.6578C22.0254 17.263 20.4464 19.541 18.2345 21.0626C16.0226 22.5842 13.3306 23.2444 10.6657 22.9188C8.00083 22.5931 5.54702 21.3041 3.76664 19.2946C2.20818 17.5356 1.25993 15.3309 1.04625 13.0078C0.995657 12.4579 1.45216 12.0088 2.00445 12.0084C2.55673 12.0079 3.00351 12.4566 3.06526 13.0055C3.27138 14.8374 4.03712 16.5706 5.27027 17.9625C6.7255 19.605 8.73118 20.6586 10.9094 20.9247C13.0876 21.1909 15.288 20.6513 17.0959 19.4075C18.9039 18.1638 20.1945 16.3018 20.7247 14.1724C21.2549 12.043 20.9881 9.79319 19.9745 7.8469C18.9608 5.90061 17.2704 4.3922 15.2217 3.6059C13.173 2.8196 10.9074 2.80968 8.8519 3.57803C7.11008 4.22911 5.62099 5.40094 4.57993 6.92229C4.56156 6.94914 4.54217 6.97505 4.52185 7Z" fill="currentColor"/>
                 </svg>
                 Restore
             </button>` :
-            `<button class="disable-btn" onclick="disableFile(${file.id})">
+                    `<button class="disable-btn" onclick="disableFile(${file.id})">
                 <svg fill="currentColor" height="200px" width="200px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <g> <path d="M366.473,172.549c-8.552-9.598-23.262-10.44-32.858-1.888c-9.595,8.552-10.44,23.263-1.887,32.858 c16.556,18.576,25.676,42.527,25.676,67.443c-0.002,55.913-45.49,101.402-101.404,101.402s-101.402-45.489-101.402-101.402 c0-24.913,9.118-48.863,25.678-67.443c8.552-9.595,7.705-24.308-1.89-32.86c-9.596-8.552-24.306-7.705-32.858,1.89 c-24.166,27.116-37.474,62.065-37.474,98.413C108.052,352.54,174.421,418.909,256,418.909s147.948-66.369,147.948-147.948 C403.948,234.611,390.639,199.661,366.473,172.549z"></path> </g> </g> <g> <g> <path d="M256,93.091c-12.853,0-23.273,10.42-23.273,23.273v99.739c0,12.853,10.42,23.273,23.273,23.273 c12.853,0,23.273-10.42,23.273-23.273v-99.739C279.273,103.511,268.853,93.091,256,93.091z"></path> </g> </g> <g> <g> <path d="M256,0C114.842,0,0,114.842,0,256s114.842,256,256,256c141.16,0,256-114.842,256-256S397.16,0,256,0z M256,465.455 c-115.493,0-209.455-93.961-209.455-209.455S140.507,46.545,256,46.545S465.455,140.507,465.455,256S371.493,465.455,256,465.455z "></path> </g> </g> </g></svg>
                 Disable
             </button>`;
-
-        const renewButton = !isDisabled ?
-            `<button class="renew-btn" onclick="renewFileDownloads(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}')">
+                const renewButton = !isDisabled ?
+                    `<button class="renew-btn" onclick="renewFileDownloads(${file.id}, '${file.original_filename.replace(/'/g, "\\'")}')">
                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 6C8.69 6 6 8.69 6 12H9L5 16L1 12H4C4 7.58 7.58 4 12 4C13.57 4 15.03 4.46 16.26 5.24L14.8 6.7C13.97 6.25 13.01 6 12 6ZM15 12L19 8L23 12H20C20 16.42 16.42 20 12 20C10.43 20 8.97 19.54 7.74 18.76L9.2 17.3C10.03 17.75 10.99 18 12 18C15.31 18 18 15.31 18 12H15Z" fill="currentColor"></path> </g></svg>
                 Renew
             </button>` : '';
-
-        fileDiv.innerHTML = `
+                fileDiv.innerHTML = `
             <div class="file-header">
                 <h3>${getFileIcon(file.mime_type)} ${file.original_filename}</h3>
                 <span class="file-status ${statusClass}">${statusText}</span>
@@ -783,9 +775,10 @@ function displayFiles(files) {
                 </button>
             </div>
         `;
-        filesContainer.appendChild(fileDiv);
-    });
-}
+                filesContainer.appendChild(fileDiv);
+            });
+        }
+
         function disableFile(fileId) {
             if (confirm('Are you sure you want to disable this file? It will be marked as deleted but not permanently removed.')) {
                 fetch('admin_api.php', {
