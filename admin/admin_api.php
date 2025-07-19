@@ -376,7 +376,6 @@ try {
                         $user['updated_at']
                     ]);
                 }
-                
                 fclose($output);
                 logAdminActivity('Export Users', "Exported " . count($users) . " users to CSV");
                 exit;
@@ -384,7 +383,6 @@ try {
                 throw new Exception('Unsupported export format');
             }
             break;
-            
         default:
             throw new Exception('Invalid action specified');
     }
