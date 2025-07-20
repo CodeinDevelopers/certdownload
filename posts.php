@@ -1,10 +1,4 @@
 <?php
-$referer = $_SERVER['HTTP_REFERER'] ?? '';
-$referer_host = parse_url($referer, PHP_URL_HOST);
-if (empty($referer) || $referer_host !== $_SERVER['HTTP_HOST']) {
-    header('HTTP/1.0 403 Forbidden');
-    exit('What are you looking for here?');
-}
 require_once 'auth00/user_auth.php';
 /**
  * Get all post titles for a specific user
