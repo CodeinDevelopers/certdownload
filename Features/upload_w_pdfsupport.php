@@ -162,6 +162,7 @@ try {
     $file = $_FILES['file'];
     $maxSize = 5 * 1024 * 1024;
     $allowedTypes = [
+        'application/pdf',
         'image/jpeg',
         'image/jpg',
         'image/png'
@@ -174,7 +175,7 @@ try {
     }
     if (!in_array($mimeType, $allowedTypes)) {
         error_log("Invalid file type: $mimeType");
-        throw new Exception('Only JPG, JPEG, and PNG image files are allowed. Detected file type: ' . $mimeType);
+        throw new Exception('Only PDF, JPG, JPEG, and PNG files are allowed. Detected file type: ' . $mimeType);
     }
     if ($file['size'] > $maxSize) {
         error_log("File too large: " . $file['size'] . " bytes");
@@ -226,6 +227,9 @@ try {
     $randomNum = rand(100, 999);
     $extension = '';
     switch ($mimeType) {
+        case 'application/pdf':
+            $extension = '.pdf';
+            break;
         case 'image/jpeg':
             $extension = '.jpg';
             break;
@@ -233,7 +237,7 @@ try {
             $extension = '.png';
             break;
         default:
-            $extension = '.jpg';
+            $extension = '.pdf';
     }
     $filename = "cert_{$currentUser['id']}_{$timestamp}_{$randomNum}{$extension}";
     $filepath = $uploadDir . $filename;
