@@ -1,4 +1,14 @@
 <?php
+/**
+ * Generate base URL for the application
+ * @param string $path Optional path to append to base URL
+ * @return string Complete URL
+ */
+function base_url($path = '') {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+    $domainName = $_SERVER['HTTP_HOST'];
+    return $protocol . $domainName . '/' . ltrim($path, '/');
+}
 session_start();
 function loadEnv($path = '.env') {
     if (!file_exists($path)) {

@@ -88,16 +88,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Protected Area - Login Required</title>
+    <title>Signin to proceed</title>
+    <link rel="manifest" href="<?php echo base_url('manifest.json') ?>">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Safer Naija">
+    <link rel="icon" sizes="512x512" href="<?php echo base_url('assets/favicon/favicon.ico') ?>">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Safer Naija">
+    <link rel="apple-touch-icon" href="<?php echo base_url('assets/favicon/android-chrome-512x512.png') ?>">
+    <link rel="apple-touch-icon" sizes="72x72" href="<?php echo base_url('assets/favicon/apple-touch-icon.png') ?>">
+    <link rel="apple-touch-icon" sizes="144x144" href="<?php echo base_url('assets/favicon/apple-touch-icon.png') ?>">
+    <link rel="apple-touch-icon" sizes="192x192" href="<?php echo base_url('assets/favicon/android-chrome-192x192.png') ?>">
+    <script type="text/javascript">
+        var serviceWorkerUrl = "<?php echo base_url('serviceworker.js'); ?>";
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register(serviceWorkerUrl, {
+                scope: '/'
+            }).then(function(registration) {
+                console.log('Service Worker registration successful with scope: ', registration.scope);
+            }).catch(function(err) {
+                console.log('Service Worker registration failed: ', err);
+            });
+        }
+    </script>
     <style>
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
-
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -109,7 +133,6 @@ body {
     color: #212529;
     padding: 20px;
 }
-
 .login-container {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(0, 0, 0, 0.1);
