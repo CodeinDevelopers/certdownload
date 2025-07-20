@@ -1,4 +1,10 @@
 <?php
+$referer = $_SERVER['HTTP_REFERER'] ?? '';
+$referer_host = parse_url($referer, PHP_URL_HOST);
+if (empty($referer) || $referer_host !== $_SERVER['HTTP_HOST']) {
+    header('HTTP/1.0 403 Forbidden');
+    exit('What are you looking for here?');
+}
 require_once './../auth00/admin_auth.php';
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -79,32 +85,21 @@ try {
         echo json_encode(["error" => "Certificate ID mismatch"]);
         exit;
     }
-
-    // Enhanced logging mechanism matching delete function
     $logDir = './logs/';
     if (!is_dir($logDir)) {
         mkdir($logDir, 0755, true);
     }
-    
     $deletedStatus = $certificate['deleted'] ? ' (DELETED)' : '';
     $logEntry = date('Y-m-d H:i:s') . " - ADMIN DOWNLOAD: {$certificate['filename']} (Original: {$certificate['original_filename']}){$deletedStatus} by Admin ID: {$currentAdmin['id']} ({$currentAdmin['name']}) - Email: {$currentAdmin['email']} - Original User ID: {$certificate['user_id']} - IMEI: {$certificate['imei']} - File path: {$certificate['file_path']}\n";
     file_put_contents($logDir . 'admin_download_log.txt', $logEntry, FILE_APPEND | LOCK_EX);
-
-    // Log activity in database (if you have the function)
     if (function_exists('logAdminActivity')) {
         $activityNote = "Downloaded certificate: {$certificate['original_filename']} (ID: {$certificate['id']}) from User ID: {$certificate['user_id']}" . $deletedStatus;
         logAdminActivity('Download File', $activityNote);
     }
-
-    // Determine download filename
     $downloadFilename = $certificate['original_filename'] ?: $certificate['filename'];
-
-    // Clean any output buffers
     if (ob_get_level()) {
         ob_end_clean();
     }
-
-    // Set download headers
     header('Content-Type: application/octet-stream');
     header('Content-Disposition: attachment; filename="' . addslashes($downloadFilename) . '"');
     header('Content-Length: ' . filesize($certificate['file_path'] ?: $filePath));
@@ -112,22 +107,17 @@ try {
     header('Pragma: public');
     header('Content-Transfer-Encoding: binary');
     header('Accept-Ranges: bytes');
-
-    // Output the file
     $actualFilePath = $certificate['file_path'] ?: $filePath;
     if (readfile($actualFilePath) === false) {
         throw new Exception("Failed to read certificate file");
     }
-
     exit;
-
 } catch (Exception $e) {
     error_log("Admin certificate download error: " . $e->getMessage());
     
     if (ob_get_level()) {
         ob_end_clean();
     }
-    
     http_response_code(500);
     header('Content-Type: application/json');
     echo json_encode(["error" => "Internal server error: " . $e->getMessage()]);
