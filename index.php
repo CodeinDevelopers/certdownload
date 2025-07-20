@@ -74,7 +74,7 @@ try {
         </div>
         <div class="upload-section">
             <div class="info-note">
-                <strong>Note:</strong> Accepted file formats: PDF, JPG, JPEG, PNG (up to 5MB).<br>
+                <strong>Note:</strong> Accepted file formats: JPG, JPEG, PNG (up to 5MB).<br>
                 <strong>Required:</strong> Select a Report to associate with this file.
             </div>
             <form id="uploadForm" class="upload-form">
