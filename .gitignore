@@ -13,7 +13,7 @@ certificates/*
 logs/
 logs/*
 admin/logs
-admin/*
+
 
 # Common log files (additional protection)
 *.log
