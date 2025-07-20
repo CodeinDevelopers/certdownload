@@ -1,9 +1,9 @@
 <?php
 require_once 'auth00/user_auth.php';
 require_once 'posts.php';
-protectPage('login');
+protectPage('login.php');
 if (!checkAuthTimeout(30)) {
-    header('Location: login');
+    header('Location: login.php');
     exit();
 }
 $currentUser = getCurrentUser();
